@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "src"
+version = "0.1.0"
+description = "User registration and authentication system with email activation, JWT, and Celery."
+authors = ["Your Name <yaroslavsysoiev2000@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "^0.115.6"
+sqlalchemy = "^2.0.36"
+pytest = "^8.3.4"
+pydantic-settings = "^2.7.0"
+pandas = "^2.2.3"
+tqdm = "^4.67.1"
+uvicorn = "^0.34.0"
+httpx = "^0.28.1"
+pytest-env = "^1.1.5"
+flake8 = "^7.1.1"
+aiosqlite = "^0.21.0"
+pytest-asyncio = "^0.25.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
