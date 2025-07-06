@@ -6,6 +6,11 @@ from sqlalchemy import select, delete
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
+from pydantic import BaseModel
+
+from config.dependencies import get_current_user
+from security.passwords import validate_password_strength, verify_password, hash_password
+
 
 from config import get_jwt_auth_manager, get_settings, BaseAppSettings
 from database import (
@@ -649,3 +654,26 @@ async def logout_user(
         )
 
     return MessageResponseSchema(message="Successfully logged out.")
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+
+@router.post("/change-password")
+async def change_password(
+    data: ChangePasswordRequest,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if not verify_password(data.old_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Old password is incorrect."
+        )
+    validate_password_strength(data.new_password)
+    current_user.hashed_password = hash_password(data.new_password)
+    db.add(current_user)
+    await db.commit()
+    return {"detail": "Password changed successfully."}

@@ -1,4 +1,6 @@
 from passlib.context import CryptContext
+import re
+from fastapi import HTTPException, status
 
 pwd_context = CryptContext(
     schemes=["bcrypt"],
@@ -37,3 +39,47 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         bool: True if the password is correct, False otherwise.
     """
     return pwd_context.verify(plain_password, hashed_password)
+
+
+def validate_password_strength(password: str) -> None:
+    """
+    Validates the strength of a password.
+
+    The password must meet the following requirements:
+    - At least 8 characters long
+    - Contains at least one uppercase letter
+    - Contains at least one lowercase letter
+    - Contains at least one digit
+    - Contains at least one special character
+
+    Args:
+        password (str): The password to validate.
+
+    Raises:
+        HTTPException: If the password does not meet the complexity requirements.
+    """
+    if len(password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters long."
+        )
+    if not re.search(r"[A-Z]", password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must contain at least one uppercase letter."
+        )
+    if not re.search(r"[a-z]", password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must contain at least one lowercase letter."
+        )
+    if not re.search(r"\d", password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must contain at least one digit."
+        )
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must contain at least one special character."
+        )
