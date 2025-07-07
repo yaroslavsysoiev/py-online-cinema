@@ -685,7 +685,30 @@ class ChangeUserGroupRequest(BaseModel):
     group: UserGroupEnum
 
 
-@router.post("/admin/users/{user_id}/activate", response_model=MessageResponseSchema, summary="Admin: Activate user account", description="Activate a user account manually (admin only)")
+@router.post(
+    "/admin/users/{user_id}/activate",
+    response_model=MessageResponseSchema,
+    summary="Admin: Activate user account",
+    description="Activate a user account manually (admin only)",
+    responses={
+        200: {
+            "description": "User activated successfully.",
+            "content": {
+                "application/json": {
+                    "example": {"message": "User activated successfully."}
+                }
+            },
+        },
+        404: {
+            "description": "User not found.",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "User not found"}
+                }
+            },
+        },
+    },
+)
 async def admin_activate_user(
     user_id: int,
     db: AsyncSession = Depends(get_db),
@@ -701,13 +724,42 @@ async def admin_activate_user(
     return MessageResponseSchema(message="User activated successfully.")
 
 
-@router.post("/admin/users/{user_id}/change-group", response_model=MessageResponseSchema, summary="Admin: Change user group", description="Change a user's group (admin only)")
+@router.post(
+    "/admin/users/{user_id}/change-group",
+    response_model=MessageResponseSchema,
+    summary="Admin: Change user group",
+    description="Change a user's group (admin only)",
+    responses={
+        200: {
+            "description": "User group changed successfully.",
+            "content": {
+                "application/json": {
+                    "example": {"message": "User group changed to moderator."}
+                }
+            },
+        },
+        404: {
+            "description": "User or group not found.",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "User not found"}
+                }
+            },
+        },
+    },
+)
 async def admin_change_user_group(
     user_id: int,
     data: ChangeUserGroupRequest,
     db: AsyncSession = Depends(get_db),
     current_admin: UserModel = Depends(get_current_admin),
 ):
+    """
+    Change a user's group. Example request body:
+    {
+        "group": "moderator"
+    }
+    """
     user = await db.get(UserModel, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
