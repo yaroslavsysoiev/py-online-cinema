@@ -2,7 +2,7 @@ import os
 
 from fastapi import Depends, HTTPException, status, Request
 
-from config.settings import TestingSettings, Settings, BaseAppSettings
+from config.settings import TestingSettings, Settings, BaseAppSettings, get_settings
 
 from security.interfaces import JWTAuthManagerInterface
 from security.token_manager import JWTAuthManager
@@ -10,23 +10,7 @@ from security.token_manager import JWTAuthManager
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db, UserModel
-
-
-def get_settings() -> BaseAppSettings:
-    """
-    Retrieve the application settings based on the current environment.
-
-    This function reads the 'ENVIRONMENT' environment variable (defaulting to 'developing' if not set)
-    and returns a corresponding settings instance. If the environment is 'testing', it returns an instance
-    of TestingSettings; otherwise, it returns an instance of Settings.
-
-    Returns:
-        BaseAppSettings: The settings instance appropriate for the current environment.
-    """
-    environment = os.getenv("ENVIRONMENT", "developing")
-    if environment == "testing":
-        return TestingSettings()
-    return Settings()
+from database.models.accounts import UserGroupEnum
 
 
 def get_jwt_auth_manager(settings: BaseAppSettings = Depends(get_settings)) -> JWTAuthManagerInterface:
@@ -53,9 +37,9 @@ def get_jwt_auth_manager(settings: BaseAppSettings = Depends(get_settings)) -> J
 
 
 async def get_current_user(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-    jwt_manager = Depends(get_jwt_auth_manager)
+        request: Request,
+        db: AsyncSession = Depends(get_db),
+        jwt_manager=Depends(get_jwt_auth_manager)
 ) -> UserModel:
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
@@ -79,3 +63,28 @@ async def get_current_user(
             detail="User not found"
         )
     return user
+
+
+async def get_current_admin(
+        current_user: UserModel = Depends(get_current_user)
+) -> UserModel:
+    if not current_user.has_group(UserGroupEnum.ADMIN):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required"
+        )
+    return current_user
+
+
+async def get_current_moderator(
+        current_user: UserModel = Depends(get_current_user)
+) -> UserModel:
+    if not (
+            current_user.has_group(UserGroupEnum.ADMIN)
+            or current_user.has_group(UserGroupEnum.MODERATOR)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Moderator privileges required"
+        )
+    return current_user
