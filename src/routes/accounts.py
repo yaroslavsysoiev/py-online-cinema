@@ -8,11 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from pydantic import BaseModel
 
-from config.dependencies import get_current_user
+from config.dependencies import get_current_user, get_current_admin
 from security.passwords import validate_password_strength, verify_password, hash_password
 
 
-from config import get_jwt_auth_manager, get_settings, BaseAppSettings
+from config import get_jwt_auth_manager, BaseAppSettings
+from config.settings import get_settings
+
 from database import (
     get_db,
     UserModel,
@@ -677,3 +679,41 @@ async def change_password(
     db.add(current_user)
     await db.commit()
     return {"detail": "Password changed successfully."}
+
+
+class ChangeUserGroupRequest(BaseModel):
+    group: UserGroupEnum
+
+
+@router.post("/admin/users/{user_id}/activate", response_model=MessageResponseSchema, summary="Admin: Activate user account", description="Activate a user account manually (admin only)")
+async def admin_activate_user(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: UserModel = Depends(get_current_admin),
+):
+    user = await db.get(UserModel, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.is_active:
+        return MessageResponseSchema(message="User is already active.")
+    user.is_active = True
+    await db.commit()
+    return MessageResponseSchema(message="User activated successfully.")
+
+
+@router.post("/admin/users/{user_id}/change-group", response_model=MessageResponseSchema, summary="Admin: Change user group", description="Change a user's group (admin only)")
+async def admin_change_user_group(
+    user_id: int,
+    data: ChangeUserGroupRequest,
+    db: AsyncSession = Depends(get_db),
+    current_admin: UserModel = Depends(get_current_admin),
+):
+    user = await db.get(UserModel, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    group = await db.scalar(select(UserGroupModel).where(UserGroupModel.name == data.group))
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    user.group_id = group.id
+    await db.commit()
+    return MessageResponseSchema(message=f"User group changed to {data.group.value}.")
