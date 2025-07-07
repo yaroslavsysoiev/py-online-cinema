@@ -12,6 +12,23 @@ class BaseAppSettings(BaseSettings):
     LOGIN_TIME_DAYS: int = 7
 
 
+def get_settings() -> BaseAppSettings:
+    """
+    Retrieve the application settings based on the current environment.
+
+    This function reads the 'ENVIRONMENT' environment variable (defaulting to 'developing' if not set)
+    and returns a corresponding settings instance. If the environment is 'testing', it returns an instance
+    of TestingSettings; otherwise, it returns an instance of Settings.
+
+    Returns:
+        BaseAppSettings: The settings instance appropriate for the current environment.
+    """
+    environment = os.getenv("ENVIRONMENT", "developing")
+    if environment == "testing":
+        return TestingSettings()
+    return Settings()
+
+
 class Settings(BaseAppSettings):
     POSTGRES_USER: str = os.getenv("POSTGRES_USER", "test_user")
     POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "test_password")
