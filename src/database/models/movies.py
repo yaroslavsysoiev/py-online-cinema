@@ -1,8 +1,8 @@
-import datetime
+from datetime import datetime
 from enum import Enum
 from typing import Optional, List
 
-from sqlalchemy import String, Float, Text, DECIMAL, UniqueConstraint, Date, ForeignKey, Table, Column, Boolean, Integer
+from sqlalchemy import String, Float, Text, DECIMAL, UniqueConstraint, Date, ForeignKey, Table, Column, Boolean, Integer, DateTime
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy import Enum as SQLAlchemyEnum
 
@@ -145,6 +145,10 @@ class MovieModel(Base):
         "MovieLikeModel", back_populates="movie", cascade="all, delete-orphan"
     )
 
+    comments: Mapped[List["MovieCommentModel"]] = relationship(
+        "MovieCommentModel", back_populates="movie", cascade="all, delete-orphan"
+    )
+
     __table_args__ = (
         UniqueConstraint("name", "date", name="unique_movie_constraint"),
     )
@@ -170,3 +174,31 @@ class MovieLikeModel(Base):
 
     user = relationship("UserModel", back_populates="movie_likes")
     movie = relationship("MovieModel", back_populates="likes")
+
+
+class MovieCommentModel(Base):
+    __tablename__ = "movie_comments"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id", ondelete="CASCADE"), nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    parent_id: Mapped[Optional[int]] = mapped_column(ForeignKey("movie_comments.id", ondelete="CASCADE"), nullable=True)
+
+    user = relationship("UserModel", back_populates="movie_comments")
+    movie = relationship("MovieModel", back_populates="comments")
+    replies = relationship("MovieCommentModel", back_populates="parent", remote_side=[id], cascade="all, delete-orphan")
+    parent = relationship("MovieCommentModel", back_populates="replies", remote_side=[id])
+
+class MovieCommentLikeModel(Base):
+    __tablename__ = "movie_comment_likes"
+    __table_args__ = (
+        UniqueConstraint("user_id", "comment_id", name="uix_user_comment_like"),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    comment_id: Mapped[int] = mapped_column(ForeignKey("movie_comments.id", ondelete="CASCADE"), nullable=False)
+    is_like: Mapped[bool] = mapped_column(Boolean, nullable=False)
+
+    user = relationship("UserModel", back_populates="movie_comment_likes")
+    comment = relationship("MovieCommentModel", back_populates="likes")
