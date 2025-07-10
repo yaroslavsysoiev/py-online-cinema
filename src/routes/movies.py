@@ -11,12 +11,14 @@ from database import (
     ActorModel,
     LanguageModel
 )
+from database.models.movies import MovieLikeModel
 from schemas import (
     MovieListResponseSchema,
     MovieListItemSchema,
     MovieDetailSchema
 )
-from schemas.movies import MovieCreateSchema, MovieUpdateSchema
+from schemas.movies import MovieCreateSchema, MovieUpdateSchema, MovieLikeRequestSchema, MovieLikeCountSchema
+from config.dependencies import get_current_user
 
 router = APIRouter()
 
@@ -429,3 +431,51 @@ async def update_movie(
         raise HTTPException(status_code=400, detail="Invalid input data.")
 
     return {"detail": "Movie updated successfully."}
+
+
+@router.post(
+    "/movies/{movie_id}/like",
+    response_model=None,
+    summary="Like or dislike a movie",
+    description="Like or dislike a movie. User can only have one like/dislike per movie.",
+    status_code=204
+)
+async def like_or_dislike_movie(
+    movie_id: int,
+    data: MovieLikeRequestSchema,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    stmt = select(MovieLikeModel).where(
+        MovieLikeModel.user_id == current_user.id,
+        MovieLikeModel.movie_id == movie_id
+    )
+    result = await db.execute(stmt)
+    like_obj = result.scalars().first()
+
+    if like_obj:
+        like_obj.is_like = data.is_like
+    else:
+        like_obj = MovieLikeModel(user_id=current_user.id, movie_id=movie_id, is_like=data.is_like)
+        db.add(like_obj)
+    await db.commit()
+    return
+
+
+@router.get(
+    "/movies/{movie_id}/likes",
+    response_model=MovieLikeCountSchema,
+    summary="Get like/dislike counts for a movie",
+    description="Get the number of likes and dislikes for a movie."
+)
+async def get_movie_like_counts(
+    movie_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = select(MovieLikeModel.is_like, func.count()).where(MovieLikeModel.movie_id == movie_id).group_by(MovieLikeModel.is_like)
+    result = await db.execute(stmt)
+    counts = dict(result.all())
+    return MovieLikeCountSchema(
+        likes=counts.get(True, 0),
+        dislikes=counts.get(False, 0)
+    )
