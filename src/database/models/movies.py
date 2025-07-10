@@ -1,8 +1,8 @@
 import datetime
 from enum import Enum
-from typing import Optional
+from typing import Optional, List
 
-from sqlalchemy import String, Float, Text, DECIMAL, UniqueConstraint, Date, ForeignKey, Table, Column
+from sqlalchemy import String, Float, Text, DECIMAL, UniqueConstraint, Date, ForeignKey, Table, Column, Boolean, Integer
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy import Enum as SQLAlchemyEnum
 
@@ -141,6 +141,10 @@ class MovieModel(Base):
         back_populates="movies"
     )
 
+    likes: Mapped[List["MovieLikeModel"]] = relationship(
+        "MovieLikeModel", back_populates="movie", cascade="all, delete-orphan"
+    )
+
     __table_args__ = (
         UniqueConstraint("name", "date", name="unique_movie_constraint"),
     )
@@ -151,3 +155,18 @@ class MovieModel(Base):
 
     def __repr__(self):
         return f"<Movie(name='{self.name}', release_date='{self.date}', score={self.score})>"
+
+
+class MovieLikeModel(Base):
+    __tablename__ = "movie_likes"
+    __table_args__ = (
+        UniqueConstraint("user_id", "movie_id", name="uix_user_movie_like"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id", ondelete="CASCADE"), nullable=False)
+    is_like: Mapped[bool] = mapped_column(Boolean, nullable=False)
+
+    user = relationship("UserModel", back_populates="movie_likes")
+    movie = relationship("MovieModel", back_populates="likes")

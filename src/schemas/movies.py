@@ -96,12 +96,13 @@ class MovieBaseSchema(BaseModel):
         return value
 
 
-class MovieDetailSchema(MovieBaseSchema):
+class MovieDetailSchema(BaseModel):
     id: int
     country: CountrySchema
     genres: List[GenreSchema]
     actors: List[ActorSchema]
     languages: List[LanguageSchema]
+    date: str
 
     model_config = {
         "from_attributes": True,
@@ -197,3 +198,10 @@ class MovieUpdateSchema(BaseModel):
             ]
         }
     }
+
+class MovieLikeRequestSchema(BaseModel):
+    is_like: bool
+
+class MovieLikeCountSchema(BaseModel):
+    likes: int
+    dislikes: int
