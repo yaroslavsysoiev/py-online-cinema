@@ -76,7 +76,7 @@ class ActorSchema(BaseModel):
 
 class MovieBaseSchema(BaseModel):
     name: str = Field(..., max_length=255)
-    date: date
+    date: 'date'
     score: float = Field(..., ge=0, le=100)
     overview: str
     status: MovieStatusEnum
@@ -117,7 +117,7 @@ class MovieDetailSchema(BaseModel):
 class MovieListItemSchema(BaseModel):
     id: int
     name: str
-    date: date
+    date: 'date'
     score: float
     overview: str
 
@@ -150,7 +150,7 @@ class MovieListResponseSchema(BaseModel):
 
 class MovieCreateSchema(BaseModel):
     name: str
-    date: date
+    date: 'date'
     score: float = Field(..., ge=0, le=100)
     overview: str
     status: MovieStatusEnum
@@ -183,7 +183,7 @@ class MovieCreateSchema(BaseModel):
 
 class MovieUpdateSchema(BaseModel):
     name: Optional[str] = None
-    date: Optional[date] = None
+    date: Optional['date'] = None
     score: Optional[float] = Field(None, ge=0, le=100)
     overview: Optional[str] = None
     status: Optional[MovieStatusEnum] = None
@@ -239,3 +239,42 @@ class MovieCommentLikeRequestSchema(BaseModel):
 class MovieCommentLikeCountSchema(BaseModel):
     likes: int
     dislikes: int
+
+
+class DirectorSchema(BaseModel):
+    id: int
+    name: str
+
+    model_config = {
+        "from_attributes": True,
+        "json_schema_extra": {
+            "examples": [
+                {"id": 1, "name": "Christopher Nolan"}
+            ]
+        }
+    }
+
+class DirectorCreateSchema(BaseModel):
+    name: str
+
+class DirectorUpdateSchema(BaseModel):
+    name: str
+
+class CertificationSchema(BaseModel):
+    id: int
+    name: str
+
+    model_config = {
+        "from_attributes": True,
+        "json_schema_extra": {
+            "examples": [
+                {"id": 1, "name": "PG-13"}
+            ]
+        }
+    }
+
+class CertificationCreateSchema(BaseModel):
+    name: str
+
+class CertificationUpdateSchema(BaseModel):
+    name: str
