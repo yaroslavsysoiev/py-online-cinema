@@ -25,6 +25,7 @@ from database import Base
 from database.validators import accounts as validators
 from security.passwords import hash_password, verify_password
 from security.utils import generate_secure_token
+from database.models.movies import MovieCommentModel, MovieCommentLikeModel
 
 
 class UserGroupEnum(str, enum.Enum):
@@ -89,6 +90,13 @@ class UserModel(Base):
         "UserProfileModel",
         back_populates="user",
         cascade="all, delete-orphan"
+    )
+
+    movie_comments: Mapped[List["MovieCommentModel"]] = relationship(
+        "MovieCommentModel", back_populates="user", cascade="all, delete-orphan"
+    )
+    movie_comment_likes: Mapped[List["MovieCommentLikeModel"]] = relationship(
+        "MovieCommentLikeModel", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self):

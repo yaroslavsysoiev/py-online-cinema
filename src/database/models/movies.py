@@ -189,6 +189,9 @@ class MovieCommentModel(Base):
     movie = relationship("MovieModel", back_populates="comments")
     replies = relationship("MovieCommentModel", back_populates="parent", remote_side=[id], cascade="all, delete-orphan")
     parent = relationship("MovieCommentModel", back_populates="replies", remote_side=[id])
+    likes: Mapped[List["MovieCommentLikeModel"]] = relationship(
+        "MovieCommentLikeModel", back_populates="comment", cascade="all, delete-orphan"
+    )
 
 class MovieCommentLikeModel(Base):
     __tablename__ = "movie_comment_likes"
