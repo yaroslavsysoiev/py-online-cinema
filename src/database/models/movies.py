@@ -149,6 +149,10 @@ class MovieModel(Base):
         "MovieCommentModel", back_populates="movie", cascade="all, delete-orphan"
     )
 
+    favorited_by: Mapped[List["FavoriteMovieModel"]] = relationship(
+        "FavoriteMovieModel", back_populates="movie", cascade="all, delete-orphan"
+    )
+
     __table_args__ = (
         UniqueConstraint("name", "date", name="unique_movie_constraint"),
     )
@@ -205,3 +209,16 @@ class MovieCommentLikeModel(Base):
 
     user = relationship("UserModel", back_populates="movie_comment_likes")
     comment = relationship("MovieCommentModel", back_populates="likes")
+
+
+class FavoriteMovieModel(Base):
+    __tablename__ = "favorite_movies"
+    __table_args__ = (
+        UniqueConstraint("user_id", "movie_id", name="uix_user_movie_favorite"),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id", ondelete="CASCADE"), nullable=False)
+
+    user = relationship("UserModel", back_populates="favorite_movies")
+    movie = relationship("MovieModel", back_populates="favorited_by")
