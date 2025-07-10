@@ -7,7 +7,7 @@ from schemas.movies import (
     ActorSchema,
 )
 
-router = APIRouter(prefix="/actors", tags=["Actors"])
+router = APIRouter(prefix="/actors", tags=["actors"])
 
 @router.post("/", response_model=ActorSchema, status_code=status.HTTP_201_CREATED)
 async def create_actor(

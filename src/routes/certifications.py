@@ -9,7 +9,7 @@ from schemas.movies import (
     CertificationUpdateSchema
 )
 
-router = APIRouter(prefix="/certifications", tags=["Certifications"])
+router = APIRouter(prefix="/certifications", tags=["certifications"])
 
 @router.post("/", response_model=CertificationSchema, status_code=status.HTTP_201_CREATED)
 async def create_certification(

@@ -9,7 +9,7 @@ from schemas.movies import (
     DirectorUpdateSchema
 )
 
-router = APIRouter(prefix="/directors", tags=["Directors"])
+router = APIRouter(prefix="/directors", tags=["directors"])
 
 @router.post("/", response_model=DirectorSchema, status_code=status.HTTP_201_CREATED)
 async def create_director(

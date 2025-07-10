@@ -7,7 +7,7 @@ from schemas.movies import (
     GenreSchema,
 )
 
-router = APIRouter(prefix="/genres", tags=["Genres"])
+router = APIRouter(prefix="/genres", tags=["genres"])
 
 @router.post("/", response_model=GenreSchema, status_code=status.HTTP_201_CREATED)
 async def create_genre(
