@@ -12,6 +12,7 @@ from database import (
     LanguageModel
 )
 from database.models.movies import MovieLikeModel
+from database.models.movies import FavoriteMovieModel
 from schemas import (
     MovieListResponseSchema,
     MovieListItemSchema,
@@ -502,3 +503,137 @@ async def get_movie_like_counts(
         likes=counts.get(True, 0),
         dislikes=counts.get(False, 0)
     )
+
+
+@router.post(
+    "/movies/{movie_id}/favorite",
+    status_code=204,
+    summary="Add a movie to favorites",
+    description="Add a movie to the authenticated user's favorites list."
+)
+async def add_movie_to_favorites(
+    movie_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    exists_stmt = select(FavoriteMovieModel).where(
+        FavoriteMovieModel.user_id == current_user.id,
+        FavoriteMovieModel.movie_id == movie_id
+    )
+    result = await db.execute(exists_stmt)
+    favorite = result.scalars().first()
+    if favorite:
+        return  # Already in favorites
+    favorite = FavoriteMovieModel(user_id=current_user.id, movie_id=movie_id)
+    db.add(favorite)
+    await db.commit()
+    return
+
+
+@router.delete(
+    "/movies/{movie_id}/favorite",
+    status_code=204,
+    summary="Remove a movie from favorites",
+    description="Remove a movie from the authenticated user's favorites list."
+)
+async def remove_movie_from_favorites(
+    movie_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    stmt = select(FavoriteMovieModel).where(
+        FavoriteMovieModel.user_id == current_user.id,
+        FavoriteMovieModel.movie_id == movie_id
+    )
+    result = await db.execute(stmt)
+    favorite = result.scalars().first()
+    if not favorite:
+        return  # Not in favorites
+    await db.delete(favorite)
+    await db.commit()
+    return
+
+
+@router.get(
+    "/favorites/",
+    response_model=MovieListResponseSchema,
+    summary="List user's favorite movies with catalog functions",
+    description="List the authenticated user's favorite movies with support for search, filter, sort, and pagination."
+)
+async def list_favorite_movies(
+    page: int = Query(1, ge=1, description="Page number (1-based index)"),
+    per_page: int = Query(10, ge=1, le=20, description="Number of items per page"),
+    year: int = Query(None, description="Release year to filter by"),
+    imdb_min: float = Query(None, description="Minimum IMDb rating"),
+    imdb_max: float = Query(None, description="Maximum IMDb rating"),
+    price_min: float = Query(None, description="Minimum price"),
+    price_max: float = Query(None, description="Maximum price"),
+    sort_by: str = Query(None, description="Sort by field: price, date, popularity, imdb, etc."),
+    sort_order: str = Query("desc", description="Sort order: asc or desc"),
+    search: str = Query(None, description="Search in title, description, actor, or director"),
+    genre: str = Query(None, description="Filter by genre name"),
+    star: str = Query(None, description="Filter by star/actor name"),
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+) -> MovieListResponseSchema:
+    offset = (page - 1) * per_page
+    # Get favorite movie IDs for the user
+    stmt_fav = select(FavoriteMovieModel.movie_id).where(FavoriteMovieModel.user_id == current_user.id)
+    result_fav = await db.execute(stmt_fav)
+    favorite_ids = [row[0] for row in result_fav.all()]
+    if not favorite_ids:
+        return MovieListResponseSchema(movies=[], prev_page=None, next_page=None, total_pages=0, total_items=0)
+    # Build the movie query with filters, search, sort
+    stmt = select(MovieModel).where(MovieModel.id.in_(favorite_ids))
+    if year:
+        stmt = stmt.where(MovieModel.date == year)
+    if imdb_min is not None:
+        stmt = stmt.where(MovieModel.score >= imdb_min)
+    if imdb_max is not None:
+        stmt = stmt.where(MovieModel.score <= imdb_max)
+    if price_min is not None:
+        stmt = stmt.where(MovieModel.budget >= price_min)
+    if price_max is not None:
+        stmt = stmt.where(MovieModel.budget <= price_max)
+    if genre:
+        stmt = stmt.join(MovieModel.genres).where(GenreModel.name.ilike(f"%{genre}%"))
+    if star:
+        stmt = stmt.join(MovieModel.actors).where(ActorModel.name.ilike(f"%{star}%"))
+    if search:
+        stmt = stmt.where(
+            (MovieModel.name.ilike(f"%{search}%")) |
+            (MovieModel.overview.ilike(f"%{search}%")) |
+            (MovieModel.actors.any(ActorModel.name.ilike(f"%{search}%")))
+        )
+    sort_map = {
+        "price": MovieModel.budget,
+        "date": MovieModel.date,
+        "popularity": MovieModel.score,
+        "imdb": MovieModel.score,
+    }
+    if sort_by in sort_map:
+        sort_column = sort_map[sort_by]
+        if sort_order == "asc":
+            stmt = stmt.order_by(sort_column.asc())
+        else:
+            stmt = stmt.order_by(sort_column.desc())
+    else:
+        stmt = stmt.order_by(MovieModel.id.desc())
+    count_stmt = stmt.with_only_columns(func.count()).order_by(None)
+    result_count = await db.execute(count_stmt)
+    total_items = result_count.scalar() or 0
+    if not total_items:
+        return MovieListResponseSchema(movies=[], prev_page=None, next_page=None, total_pages=0, total_items=0)
+    stmt = stmt.offset(offset).limit(per_page)
+    result_movies = await db.execute(stmt)
+    movies = result_movies.scalars().all()
+    movie_list = [MovieListItemSchema.model_validate(movie) for movie in movies]
+    total_pages = (total_items + per_page - 1) // per_page
+    response = MovieListResponseSchema(
+        movies=movie_list,
+        prev_page=f"/favorites/?page={page - 1}&per_page={per_page}" if page > 1 else None,
+        next_page=f"/favorites/?page={page + 1}&per_page={per_page}" if page < total_pages else None,
+        total_pages=total_pages,
+        total_items=total_items,
+    )
+    return response
