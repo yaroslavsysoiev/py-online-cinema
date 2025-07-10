@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 from enum import Enum
 from typing import Optional, List
 
@@ -42,6 +42,18 @@ MoviesLanguagesModel = Table(
     Base.metadata,
     Column("movie_id", ForeignKey("movies.id", ondelete="CASCADE"), primary_key=True),
     Column("language_id", ForeignKey("languages.id", ondelete="CASCADE"), primary_key=True),
+)
+
+# --- Додаємо асоціативну таблицю для режисерів ---
+DirectorsMoviesModel = Table(
+    "directors_movies",
+    Base.metadata,
+    Column(
+        "movie_id",
+        ForeignKey("movies.id", ondelete="CASCADE"), primary_key=True, nullable=False),
+    Column(
+        "director_id",
+        ForeignKey("directors.id", ondelete="CASCADE"), primary_key=True, nullable=False),
 )
 
 
@@ -153,6 +165,17 @@ class MovieModel(Base):
         "FavoriteMovieModel", back_populates="movie", cascade="all, delete-orphan"
     )
 
+    # Додаємо сертифікацію
+    certification_id: Mapped[int] = mapped_column(ForeignKey("certifications.id"), nullable=False)
+    certification: Mapped["CertificationModel"] = relationship("CertificationModel", back_populates="movies")
+
+    # Додаємо режисерів
+    directors: Mapped[list["DirectorModel"]] = relationship(
+        "DirectorModel",
+        secondary=DirectorsMoviesModel,
+        back_populates="movies"
+    )
+
     __table_args__ = (
         UniqueConstraint("name", "date", name="unique_movie_constraint"),
     )
@@ -186,7 +209,7 @@ class MovieCommentModel(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id", ondelete="CASCADE"), nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.utcnow, nullable=False)
     parent_id: Mapped[Optional[int]] = mapped_column(ForeignKey("movie_comments.id", ondelete="CASCADE"), nullable=True)
 
     user = relationship("UserModel", back_populates="movie_comments")
@@ -222,3 +245,31 @@ class FavoriteMovieModel(Base):
 
     user = relationship("UserModel", back_populates="favorite_movies")
     movie = relationship("MovieModel", back_populates="favorited_by")
+
+# --- Додаємо CertificationModel ---
+class CertificationModel(Base):
+    __tablename__ = "certifications"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+
+    movies: Mapped[list["MovieModel"]] = relationship("MovieModel", back_populates="certification")
+
+    def __repr__(self):
+        return f"<Certification(name='{self.name}')>"
+
+# --- Додаємо DirectorModel ---
+class DirectorModel(Base):
+    __tablename__ = "directors"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+
+    movies: Mapped[list["MovieModel"]] = relationship(
+        "MovieModel",
+        secondary=DirectorsMoviesModel,
+        back_populates="directors"
+    )
+
+    def __repr__(self):
+        return f"<Director(name='{self.name}')>"
