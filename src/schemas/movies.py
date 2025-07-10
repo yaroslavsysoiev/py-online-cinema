@@ -199,16 +199,20 @@ class MovieUpdateSchema(BaseModel):
         }
     }
 
+
 class MovieLikeRequestSchema(BaseModel):
     is_like: bool
+
 
 class MovieLikeCountSchema(BaseModel):
     likes: int
     dislikes: int
 
+
 class MovieCommentCreateSchema(BaseModel):
     text: str = Field(..., min_length=1, max_length=1000)
     parent_id: Optional[int] = None
+
 
 class MovieCommentResponseSchema(BaseModel):
     id: int
@@ -222,12 +226,15 @@ class MovieCommentResponseSchema(BaseModel):
     dislikes: int = 0
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
 
 MovieCommentResponseSchema.update_forward_refs()
 
+
 class MovieCommentLikeRequestSchema(BaseModel):
     is_like: bool
+
 
 class MovieCommentLikeCountSchema(BaseModel):
     likes: int
