@@ -11,13 +11,13 @@ from database import (
     ActorModel,
     LanguageModel
 )
-from database.models.movies import MovieLikeModel, FavoriteMovieModel, MovieRatingModel, MovieCommentModel, MovieCommentLikeModel, DirectorModel
+from database.models.movies import MovieLikeModel, FavoriteMovieModel, MovieRatingModel, MovieCommentModel, MovieCommentLikeModel, DirectorModel, CartModel, CartItemModel, PurchasedMovieModel
 from schemas import (
     MovieListResponseSchema,
     MovieListItemSchema,
     MovieDetailSchema
 )
-from schemas.movies import MovieCreateSchema, MovieUpdateSchema, MovieLikeRequestSchema, MovieLikeCountSchema, MovieRatingCreateSchema, MovieRatingResponseSchema, MovieRatingAverageSchema, MovieCommentCreateSchema, MovieCommentResponseSchema, MovieCommentLikeRequestSchema, MovieCommentLikeCountSchema
+from schemas.movies import MovieCreateSchema, MovieUpdateSchema, MovieLikeRequestSchema, MovieLikeCountSchema, MovieRatingCreateSchema, MovieRatingResponseSchema, MovieRatingAverageSchema, MovieCommentCreateSchema, MovieCommentResponseSchema, MovieCommentLikeRequestSchema, MovieCommentLikeCountSchema, CartItemCreateSchema, CartSchema, PurchasedMovieSchema
 from config.dependencies import get_current_user
 
 router = APIRouter()
@@ -358,6 +358,7 @@ async def delete_movie(
     This function deletes a movie identified by its unique ID.
     If the movie does not exist, a 404 error is raised.
     If the movie has been purchased by at least one user, deletion is prevented.
+    If the movie is in users' carts, a warning is provided.
 
     :param movie_id: The unique identifier of the movie to delete.
     :type movie_id: int
@@ -381,15 +382,27 @@ async def delete_movie(
         )
 
     # Перевіряємо, чи купив хтось цей фільм
-    # Припускаємо, що є модель PurchaseModel або аналогічна
-    # Якщо її немає, можна додати пізніше
-    # purchase_stmt = select(PurchaseModel).where(PurchaseModel.movie_id == movie_id)
-    # purchase_result = await db.execute(purchase_stmt)
-    # if purchase_result.scalars().first():
-    #     raise HTTPException(
-    #         status_code=400,
-    #         detail="Cannot delete movie that has been purchased by users."
-    #     )
+    purchased_stmt = select(PurchasedMovieModel).where(PurchasedMovieModel.movie_id == movie_id)
+    purchased_result = await db.execute(purchased_stmt)
+    if purchased_result.scalars().first():
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete movie that has been purchased by users."
+        )
+
+    # Перевіряємо, чи є фільм в кошиках користувачів
+    cart_items_stmt = select(CartItemModel).where(CartItemModel.movie_id == movie_id)
+    cart_items_result = await db.execute(cart_items_stmt)
+    cart_items = cart_items_result.scalars().all()
+    
+    if cart_items:
+        # Отримуємо список користувачів, у яких фільм в кошику
+        user_ids = [item.cart.user_id for item in cart_items]
+        user_ids_str = ", ".join(map(str, user_ids))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete movie that is in users' carts. Users with movie in cart: {user_ids_str}"
+        )
 
     await db.delete(movie)
     await db.commit()
@@ -852,3 +865,198 @@ async def get_comment_like_counts(
         likes=counts.get(True, 0),
         dislikes=counts.get(False, 0)
     )
+
+# --- Shopping Cart endpoints ---
+@router.post(
+    "/cart/add",
+    response_model=CartSchema,
+    summary="Add movie to cart",
+    description="Add a movie to the user's shopping cart. Cannot add if already purchased or already in cart.",
+    status_code=201
+)
+async def add_to_cart(
+    data: CartItemCreateSchema,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    # Перевіряємо, чи купив користувач цей фільм
+    purchased_stmt = select(PurchasedMovieModel).where(
+        PurchasedMovieModel.user_id == current_user.id,
+        PurchasedMovieModel.movie_id == data.movie_id
+    )
+    purchased_result = await db.execute(purchased_stmt)
+    if purchased_result.scalars().first():
+        raise HTTPException(status_code=400, detail="You have already purchased this movie.")
+    
+    # Отримуємо або створюємо кошик користувача
+    cart_stmt = select(CartModel).where(CartModel.user_id == current_user.id)
+    cart_result = await db.execute(cart_stmt)
+    cart = cart_result.scalars().first()
+    
+    if not cart:
+        cart = CartModel(user_id=current_user.id)
+        db.add(cart)
+        await db.flush()
+    
+    # Перевіряємо, чи фільм вже в кошику
+    existing_item_stmt = select(CartItemModel).where(
+        CartItemModel.cart_id == cart.id,
+        CartItemModel.movie_id == data.movie_id
+    )
+    existing_result = await db.execute(existing_item_stmt)
+    if existing_result.scalars().first():
+        raise HTTPException(status_code=400, detail="Movie is already in your cart.")
+    
+    # Додаємо фільм до кошика
+    cart_item = CartItemModel(cart_id=cart.id, movie_id=data.movie_id)
+    db.add(cart_item)
+    await db.commit()
+    await db.refresh(cart)
+    
+    # Розраховуємо загальну ціну
+    total_price = sum(item.movie.price for item in cart.items)
+    return CartSchema(
+        id=cart.id,
+        user_id=cart.user_id,
+        items=cart.items,
+        total_price=total_price
+    )
+
+@router.delete(
+    "/cart/remove/{movie_id}",
+    status_code=204,
+    summary="Remove movie from cart",
+    description="Remove a movie from the user's shopping cart."
+)
+async def remove_from_cart(
+    movie_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    cart_stmt = select(CartModel).where(CartModel.user_id == current_user.id)
+    cart_result = await db.execute(cart_stmt)
+    cart = cart_result.scalars().first()
+    
+    if not cart:
+        raise HTTPException(status_code=404, detail="Cart not found.")
+    
+    item_stmt = select(CartItemModel).where(
+        CartItemModel.cart_id == cart.id,
+        CartItemModel.movie_id == movie_id
+    )
+    item_result = await db.execute(item_stmt)
+    item = item_result.scalars().first()
+    
+    if not item:
+        raise HTTPException(status_code=404, detail="Movie not found in cart.")
+    
+    await db.delete(item)
+    await db.commit()
+
+@router.get(
+    "/cart/",
+    response_model=CartSchema,
+    summary="Get user's cart",
+    description="Get the current user's shopping cart with all items and total price."
+)
+async def get_cart(
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    cart_stmt = select(CartModel).where(CartModel.user_id == current_user.id)
+    cart_result = await db.execute(cart_stmt)
+    cart = cart_result.scalars().first()
+    
+    if not cart:
+        # Створюємо порожній кошик
+        cart = CartModel(user_id=current_user.id)
+        db.add(cart)
+        await db.commit()
+        await db.refresh(cart)
+    
+    total_price = sum(item.movie.price for item in cart.items)
+    return CartSchema(
+        id=cart.id,
+        user_id=cart.user_id,
+        items=cart.items,
+        total_price=total_price
+    )
+
+@router.post(
+    "/cart/purchase",
+    response_model=list[PurchasedMovieSchema],
+    summary="Purchase all movies in cart",
+    description="Purchase all movies in the user's cart. Movies are moved to purchased list and cart is cleared.",
+    status_code=201
+)
+async def purchase_cart(
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    cart_stmt = select(CartModel).where(CartModel.user_id == current_user.id)
+    cart_result = await db.execute(cart_stmt)
+    cart = cart_result.scalars().first()
+    
+    if not cart or not cart.items:
+        raise HTTPException(status_code=400, detail="Cart is empty.")
+    
+    purchased_movies = []
+    
+    for item in cart.items:
+        # Перевіряємо, чи не купив користувач цей фільм
+        purchased_stmt = select(PurchasedMovieModel).where(
+            PurchasedMovieModel.user_id == current_user.id,
+            PurchasedMovieModel.movie_id == item.movie_id
+        )
+        purchased_result = await db.execute(purchased_stmt)
+        if purchased_result.scalars().first():
+            continue  # Пропускаємо вже куплені фільми
+        
+        # Додаємо до куплених
+        purchased_movie = PurchasedMovieModel(
+            user_id=current_user.id,
+            movie_id=item.movie_id,
+            price_paid=item.movie.price
+        )
+        db.add(purchased_movie)
+        purchased_movies.append(purchased_movie)
+    
+    # Очищаємо кошик
+    await db.delete(cart)
+    await db.commit()
+    
+    return purchased_movies
+
+@router.delete(
+    "/cart/clear",
+    status_code=204,
+    summary="Clear cart",
+    description="Remove all items from the user's shopping cart."
+)
+async def clear_cart(
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    cart_stmt = select(CartModel).where(CartModel.user_id == current_user.id)
+    cart_result = await db.execute(cart_stmt)
+    cart = cart_result.scalars().first()
+    
+    if cart:
+        await db.delete(cart)
+        await db.commit()
+
+@router.get(
+    "/purchased/",
+    response_model=list[PurchasedMovieSchema],
+    summary="Get user's purchased movies",
+    description="Get all movies purchased by the current user."
+)
+async def get_purchased_movies(
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    stmt = select(PurchasedMovieModel).where(
+        PurchasedMovieModel.user_id == current_user.id
+    ).order_by(PurchasedMovieModel.purchased_at.desc())
+    result = await db.execute(stmt)
+    return result.scalars().all()
