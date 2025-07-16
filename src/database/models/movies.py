@@ -5,6 +5,8 @@ from typing import Optional, List
 from sqlalchemy import String, Float, Text, DECIMAL, UniqueConstraint, Date, ForeignKey, Table, Column, Boolean, Integer, DateTime
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy import Enum as SQLAlchemyEnum
+from sqlalchemy.dialects.postgresql import UUID
+import uuid as uuid_lib
 
 from database import Base
 
@@ -54,6 +56,18 @@ DirectorsMoviesModel = Table(
     Column(
         "director_id",
         ForeignKey("directors.id", ondelete="CASCADE"), primary_key=True, nullable=False),
+)
+
+# --- Додаємо асоціативну таблицю для акторів (stars) ---
+StarsMoviesModel = Table(
+    "stars_movies",
+    Base.metadata,
+    Column(
+        "movie_id",
+        ForeignKey("movies.id", ondelete="CASCADE"), primary_key=True, nullable=False),
+    Column(
+        "star_id",
+        ForeignKey("actors.id", ondelete="CASCADE"), primary_key=True, nullable=False),
 )
 
 
@@ -122,8 +136,19 @@ class MovieModel(Base):
     __tablename__ = "movies"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    uuid: Mapped[str] = mapped_column(UUID(as_uuid=False), default=lambda: str(uuid_lib.uuid4()), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    date: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    time: Mapped[int] = mapped_column(Integer, nullable=False)  # duration in minutes
+    imdb: Mapped[float] = mapped_column(Float, nullable=False)
+    votes: Mapped[int] = mapped_column(Integer, nullable=False)
+    meta_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    gross: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    price: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False)
+    certification_id: Mapped[int] = mapped_column(ForeignKey("certifications.id"), nullable=False)
+    certification: Mapped["CertificationModel"] = relationship("CertificationModel", back_populates="movies")
+    date: Mapped["datetime.date"] = mapped_column(Date, nullable=False)
     score: Mapped[float] = mapped_column(Float, nullable=False)
     overview: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[MovieStatusEnum] = mapped_column(
@@ -131,53 +156,44 @@ class MovieModel(Base):
     )
     budget: Mapped[float] = mapped_column(DECIMAL(15, 2), nullable=False)
     revenue: Mapped[float] = mapped_column(Float, nullable=False)
-
     country_id: Mapped[int] = mapped_column(ForeignKey("countries.id"), nullable=False)
     country: Mapped["CountryModel"] = relationship("CountryModel", back_populates="movies")
-
     genres: Mapped[list["GenreModel"]] = relationship(
         "GenreModel",
         secondary=MoviesGenresModel,
         back_populates="movies"
     )
-
     actors: Mapped[list["ActorModel"]] = relationship(
         "ActorModel",
         secondary=ActorsMoviesModel,
         back_populates="movies"
     )
-
-    languages: Mapped[list["LanguageModel"]] = relationship(
-        "LanguageModel",
-        secondary=MoviesLanguagesModel,
+    stars: Mapped[list["ActorModel"]] = relationship(
+        "ActorModel",
+        secondary=StarsMoviesModel,
         back_populates="movies"
     )
-
-    likes: Mapped[List["MovieLikeModel"]] = relationship(
-        "MovieLikeModel", back_populates="movie", cascade="all, delete-orphan"
-    )
-
-    comments: Mapped[List["MovieCommentModel"]] = relationship(
-        "MovieCommentModel", back_populates="movie", cascade="all, delete-orphan"
-    )
-
-    favorited_by: Mapped[List["FavoriteMovieModel"]] = relationship(
-        "FavoriteMovieModel", back_populates="movie", cascade="all, delete-orphan"
-    )
-
-    # Додаємо сертифікацію
-    certification_id: Mapped[int] = mapped_column(ForeignKey("certifications.id"), nullable=False)
-    certification: Mapped["CertificationModel"] = relationship("CertificationModel", back_populates="movies")
-
-    # Додаємо режисерів
     directors: Mapped[list["DirectorModel"]] = relationship(
         "DirectorModel",
         secondary=DirectorsMoviesModel,
         back_populates="movies"
     )
-
+    languages: Mapped[list["LanguageModel"]] = relationship(
+        "LanguageModel",
+        secondary=MoviesLanguagesModel,
+        back_populates="movies"
+    )
+    likes: Mapped[List["MovieLikeModel"]] = relationship(
+        "MovieLikeModel", back_populates="movie", cascade="all, delete-orphan"
+    )
+    comments: Mapped[List["MovieCommentModel"]] = relationship(
+        "MovieCommentModel", back_populates="movie", cascade="all, delete-orphan"
+    )
+    favorited_by: Mapped[List["FavoriteMovieModel"]] = relationship(
+        "FavoriteMovieModel", back_populates="movie", cascade="all, delete-orphan"
+    )
     __table_args__ = (
-        UniqueConstraint("name", "date", name="unique_movie_constraint"),
+        UniqueConstraint("name", "year", "time", name="unique_movie_constraint"),
     )
 
     @classmethod
