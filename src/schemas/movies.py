@@ -241,6 +241,23 @@ class MovieCommentLikeCountSchema(BaseModel):
     dislikes: int
 
 
+class MovieRatingCreateSchema(BaseModel):
+    rating: int = Field(..., ge=1, le=10)
+
+class MovieRatingResponseSchema(BaseModel):
+    user_id: int
+    movie_id: int
+    rating: int
+
+    model_config = {
+        "from_attributes": True
+    }
+
+class MovieRatingAverageSchema(BaseModel):
+    movie_id: int
+    average_rating: float
+    ratings_count: int
+
 class DirectorSchema(BaseModel):
     id: int
     name: str
