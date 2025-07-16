@@ -192,6 +192,9 @@ class MovieModel(Base):
     favorited_by: Mapped[List["FavoriteMovieModel"]] = relationship(
         "FavoriteMovieModel", back_populates="movie", cascade="all, delete-orphan"
     )
+    ratings: Mapped[List["MovieRatingModel"]] = relationship(
+        "MovieRatingModel", back_populates="movie", cascade="all, delete-orphan"
+    )
     __table_args__ = (
         UniqueConstraint("name", "year", "time", name="unique_movie_constraint"),
     )
@@ -289,3 +292,17 @@ class DirectorModel(Base):
 
     def __repr__(self):
         return f"<Director(name='{self.name}')>"
+
+
+class MovieRatingModel(Base):
+    __tablename__ = "movie_ratings"
+    __table_args__ = (
+        UniqueConstraint("user_id", "movie_id", name="uix_user_movie_rating"),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id", ondelete="CASCADE"), nullable=False)
+    rating: Mapped[int] = mapped_column(Integer, nullable=False)  # 1-10
+
+    user = relationship("UserModel", back_populates="movie_ratings")
+    movie = relationship("MovieModel", back_populates="ratings")
