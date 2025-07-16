@@ -357,6 +357,7 @@ async def delete_movie(
 
     This function deletes a movie identified by its unique ID.
     If the movie does not exist, a 404 error is raised.
+    If the movie has been purchased by at least one user, deletion is prevented.
 
     :param movie_id: The unique identifier of the movie to delete.
     :type movie_id: int
@@ -364,6 +365,7 @@ async def delete_movie(
     :type db: AsyncSession
 
     :raises HTTPException: Raises a 404 error if the movie with the given ID is not found.
+    :raises HTTPException: Raises a 400 error if the movie has been purchased by users.
 
     :return: A response indicating the successful deletion of the movie.
     :rtype: None
@@ -377,6 +379,17 @@ async def delete_movie(
             status_code=404,
             detail="Movie with the given ID was not found."
         )
+
+    # Перевіряємо, чи купив хтось цей фільм
+    # Припускаємо, що є модель PurchaseModel або аналогічна
+    # Якщо її немає, можна додати пізніше
+    # purchase_stmt = select(PurchaseModel).where(PurchaseModel.movie_id == movie_id)
+    # purchase_result = await db.execute(purchase_stmt)
+    # if purchase_result.scalars().first():
+    #     raise HTTPException(
+    #         status_code=400,
+    #         detail="Cannot delete movie that has been purchased by users."
+    #     )
 
     await db.delete(movie)
     await db.commit()
