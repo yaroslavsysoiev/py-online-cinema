@@ -11,7 +11,7 @@ from database import (
     ActorModel,
     LanguageModel
 )
-from database.models.movies import MovieLikeModel, FavoriteMovieModel, MovieRatingModel, MovieCommentModel, MovieCommentLikeModel
+from database.models.movies import MovieLikeModel, FavoriteMovieModel, MovieRatingModel, MovieCommentModel, MovieCommentLikeModel, DirectorModel
 from schemas import (
     MovieListResponseSchema,
     MovieListItemSchema,
@@ -74,15 +74,16 @@ async def get_movie_list(
         stmt = stmt.join(MovieModel.genres).where(GenreModel.name.ilike(f"%{genre}%"))
     if star:
         stmt = stmt.join(MovieModel.actors).where(ActorModel.name.ilike(f"%{star}%"))
-    # Remove director filter if DirectorModel is not defined
+    if director:
+        stmt = stmt.join(MovieModel.directors).where(DirectorModel.name.ilike(f"%{director}%"))
 
     # Searching
     if search:
         stmt = stmt.where(
             (MovieModel.name.ilike(f"%{search}%")) |
             (MovieModel.overview.ilike(f"%{search}%")) |
-            (MovieModel.actors.any(ActorModel.name.ilike(f"%{search}%")))
-            # Add director search if DirectorModel is defined
+            (MovieModel.actors.any(ActorModel.name.ilike(f"%{search}%"))) |
+            (MovieModel.directors.any(DirectorModel.name.ilike(f"%{search}%")))
         )
 
     # Sorting
@@ -497,7 +498,8 @@ async def get_movie_like_counts(
 ):
     stmt = select(MovieLikeModel.is_like, func.count()).where(MovieLikeModel.movie_id == movie_id).group_by(MovieLikeModel.is_like)
     result = await db.execute(stmt)
-    counts = dict(result.all())
+    rows = result.all()
+    counts = {row[0]: row[1] for row in rows}
     return MovieLikeCountSchema(
         likes=counts.get(True, 0),
         dislikes=counts.get(False, 0)
@@ -572,6 +574,7 @@ async def list_favorite_movies(
     search: str = Query(None, description="Search in title, description, actor, or director"),
     genre: str = Query(None, description="Filter by genre name"),
     star: str = Query(None, description="Filter by star/actor name"),
+    director: str = Query(None, description="Filter by director name"),
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user),
 ) -> MovieListResponseSchema:
@@ -598,11 +601,14 @@ async def list_favorite_movies(
         stmt = stmt.join(MovieModel.genres).where(GenreModel.name.ilike(f"%{genre}%"))
     if star:
         stmt = stmt.join(MovieModel.actors).where(ActorModel.name.ilike(f"%{star}%"))
+    if director:
+        stmt = stmt.join(MovieModel.directors).where(DirectorModel.name.ilike(f"%{director}%"))
     if search:
         stmt = stmt.where(
             (MovieModel.name.ilike(f"%{search}%")) |
             (MovieModel.overview.ilike(f"%{search}%")) |
-            (MovieModel.actors.any(ActorModel.name.ilike(f"%{search}%")))
+            (MovieModel.actors.any(ActorModel.name.ilike(f"%{search}%"))) |
+            (MovieModel.directors.any(DirectorModel.name.ilike(f"%{search}%")))
         )
     sort_map = {
         "price": MovieModel.budget,
@@ -827,7 +833,8 @@ async def get_comment_like_counts(
 ):
     stmt = select(MovieCommentLikeModel.is_like, func.count()).where(MovieCommentLikeModel.comment_id == comment_id).group_by(MovieCommentLikeModel.is_like)
     result = await db.execute(stmt)
-    counts = dict(result.all())
+    rows = result.all()
+    counts = {row[0]: row[1] for row in rows}
     return MovieCommentLikeCountSchema(
         likes=counts.get(True, 0),
         dislikes=counts.get(False, 0)
