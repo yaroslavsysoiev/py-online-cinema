@@ -11,14 +11,13 @@ from database import (
     ActorModel,
     LanguageModel
 )
-from database.models.movies import MovieLikeModel
-from database.models.movies import FavoriteMovieModel
+from database.models.movies import MovieLikeModel, FavoriteMovieModel, MovieRatingModel
 from schemas import (
     MovieListResponseSchema,
     MovieListItemSchema,
     MovieDetailSchema
 )
-from schemas.movies import MovieCreateSchema, MovieUpdateSchema, MovieLikeRequestSchema, MovieLikeCountSchema
+from schemas.movies import MovieCreateSchema, MovieUpdateSchema, MovieLikeRequestSchema, MovieLikeCountSchema, MovieRatingCreateSchema, MovieRatingResponseSchema, MovieRatingAverageSchema
 from config.dependencies import get_current_user
 
 router = APIRouter()
@@ -637,3 +636,72 @@ async def list_favorite_movies(
         total_items=total_items,
     )
     return response
+
+
+@router.post(
+    "/movies/{movie_id}/rate",
+    response_model=MovieRatingResponseSchema,
+    summary="Rate a movie (1-10)",
+    description="Set or update your rating for a movie.",
+    status_code=201
+)
+async def rate_movie(
+    movie_id: int,
+    data: MovieRatingCreateSchema,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    stmt = select(MovieRatingModel).where(
+        MovieRatingModel.user_id == current_user.id,
+        MovieRatingModel.movie_id == movie_id
+    )
+    result = await db.execute(stmt)
+    rating_obj = result.scalars().first()
+    if rating_obj:
+        rating_obj.rating = data.rating
+    else:
+        rating_obj = MovieRatingModel(user_id=current_user.id, movie_id=movie_id, rating=data.rating)
+        db.add(rating_obj)
+    await db.commit()
+    await db.refresh(rating_obj)
+    return rating_obj
+
+@router.get(
+    "/movies/{movie_id}/rating",
+    response_model=MovieRatingAverageSchema,
+    summary="Get average rating for a movie",
+    description="Get the average rating and number of ratings for a movie."
+)
+async def get_movie_average_rating(
+    movie_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    from sqlalchemy import func
+    stmt = select(
+        func.avg(MovieRatingModel.rating),
+        func.count(MovieRatingModel.id)
+    ).where(MovieRatingModel.movie_id == movie_id)
+    result = await db.execute(stmt)
+    avg, count = result.first()
+    return MovieRatingAverageSchema(movie_id=movie_id, average_rating=avg or 0.0, ratings_count=count or 0)
+
+@router.get(
+    "/movies/{movie_id}/my-rating",
+    response_model=MovieRatingResponseSchema,
+    summary="Get your rating for a movie",
+    description="Get the current user's rating for a movie, if exists."
+)
+async def get_my_movie_rating(
+    movie_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    stmt = select(MovieRatingModel).where(
+        MovieRatingModel.user_id == current_user.id,
+        MovieRatingModel.movie_id == movie_id
+    )
+    result = await db.execute(stmt)
+    rating_obj = result.scalars().first()
+    if not rating_obj:
+        raise HTTPException(status_code=404, detail="You have not rated this movie yet.")
+    return rating_obj
