@@ -11,13 +11,13 @@ from database import (
     ActorModel,
     LanguageModel
 )
-from database.models.movies import MovieLikeModel, FavoriteMovieModel, MovieRatingModel
+from database.models.movies import MovieLikeModel, FavoriteMovieModel, MovieRatingModel, MovieCommentModel, MovieCommentLikeModel
 from schemas import (
     MovieListResponseSchema,
     MovieListItemSchema,
     MovieDetailSchema
 )
-from schemas.movies import MovieCreateSchema, MovieUpdateSchema, MovieLikeRequestSchema, MovieLikeCountSchema, MovieRatingCreateSchema, MovieRatingResponseSchema, MovieRatingAverageSchema
+from schemas.movies import MovieCreateSchema, MovieUpdateSchema, MovieLikeRequestSchema, MovieLikeCountSchema, MovieRatingCreateSchema, MovieRatingResponseSchema, MovieRatingAverageSchema, MovieCommentCreateSchema, MovieCommentResponseSchema, MovieCommentLikeRequestSchema, MovieCommentLikeCountSchema
 from config.dependencies import get_current_user
 
 router = APIRouter()
@@ -705,3 +705,130 @@ async def get_my_movie_rating(
     if not rating_obj:
         raise HTTPException(status_code=404, detail="You have not rated this movie yet.")
     return rating_obj
+
+# --- CRUD для коментарів до фільмів ---
+@router.post(
+    "/movies/{movie_id}/comments",
+    response_model=MovieCommentResponseSchema,
+    summary="Create a comment on a movie",
+    description="Add a comment to a movie. Can be a reply to another comment.",
+    status_code=201
+)
+async def create_movie_comment(
+    movie_id: int,
+    data: MovieCommentCreateSchema,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    comment = MovieCommentModel(
+        user_id=current_user.id,
+        movie_id=movie_id,
+        text=data.text,
+        parent_id=data.parent_id
+    )
+    db.add(comment)
+    await db.commit()
+    await db.refresh(comment)
+    return comment
+
+@router.get(
+    "/movies/{movie_id}/comments",
+    response_model=list[MovieCommentResponseSchema],
+    summary="Get comments for a movie",
+    description="Get all comments for a movie with replies."
+)
+async def get_movie_comments(
+    movie_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = select(MovieCommentModel).where(
+        MovieCommentModel.movie_id == movie_id,
+        MovieCommentModel.parent_id.is_(None)
+    ).order_by(MovieCommentModel.created_at.desc())
+    result = await db.execute(stmt)
+    comments = result.scalars().all()
+    return comments
+
+@router.patch(
+    "/comments/{comment_id}",
+    response_model=MovieCommentResponseSchema,
+    summary="Update a comment",
+    description="Update your own comment."
+)
+async def update_movie_comment(
+    comment_id: int,
+    data: MovieCommentCreateSchema,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    comment = await db.get(MovieCommentModel, comment_id)
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found.")
+    if comment.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You can only edit your own comments.")
+    comment.text = data.text
+    await db.commit()
+    await db.refresh(comment)
+    return comment
+
+@router.delete(
+    "/comments/{comment_id}",
+    status_code=204,
+    summary="Delete a comment",
+    description="Delete your own comment."
+)
+async def delete_movie_comment(
+    comment_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    comment = await db.get(MovieCommentModel, comment_id)
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found.")
+    if comment.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You can only delete your own comments.")
+    await db.delete(comment)
+    await db.commit()
+
+@router.post(
+    "/comments/{comment_id}/like",
+    status_code=204,
+    summary="Like or dislike a comment",
+    description="Like or dislike a comment. User can only have one like/dislike per comment."
+)
+async def like_or_dislike_comment(
+    comment_id: int,
+    data: MovieCommentLikeRequestSchema,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    stmt = select(MovieCommentLikeModel).where(
+        MovieCommentLikeModel.user_id == current_user.id,
+        MovieCommentLikeModel.comment_id == comment_id
+    )
+    result = await db.execute(stmt)
+    like_obj = result.scalars().first()
+    if like_obj:
+        like_obj.is_like = data.is_like
+    else:
+        like_obj = MovieCommentLikeModel(user_id=current_user.id, comment_id=comment_id, is_like=data.is_like)
+        db.add(like_obj)
+    await db.commit()
+
+@router.get(
+    "/comments/{comment_id}/likes",
+    response_model=MovieCommentLikeCountSchema,
+    summary="Get like/dislike counts for a comment",
+    description="Get the number of likes and dislikes for a comment."
+)
+async def get_comment_like_counts(
+    comment_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = select(MovieCommentLikeModel.is_like, func.count()).where(MovieCommentLikeModel.comment_id == comment_id).group_by(MovieCommentLikeModel.is_like)
+    result = await db.execute(stmt)
+    counts = dict(result.all())
+    return MovieCommentLikeCountSchema(
+        likes=counts.get(True, 0),
+        dislikes=counts.get(False, 0)
+    )
