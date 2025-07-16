@@ -1,4 +1,6 @@
 from pydantic import BaseModel, EmailStr, field_validator
+from datetime import datetime
+from typing import Optional
 
 from database import accounts_validators
 
@@ -73,3 +75,26 @@ class TokenRefreshResponseSchema(BaseModel):
 
 class ResendActivationRequestSchema(BaseModel):
     email: EmailStr
+
+
+class NotificationSchema(BaseModel):
+    id: int
+    title: str
+    message: str
+    is_read: bool
+    created_at: datetime
+    notification_type: str
+    related_id: Optional[int] = None
+
+    model_config = {
+        "from_attributes": True
+    }
+
+class NotificationCreateSchema(BaseModel):
+    title: str
+    message: str
+    notification_type: str
+    related_id: Optional[int] = None
+
+class NotificationUpdateSchema(BaseModel):
+    is_read: bool

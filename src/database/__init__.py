@@ -7,7 +7,8 @@ from database.models.accounts import (
     UserGroupEnum,
     ActivationTokenModel,
     PasswordResetTokenModel,
-    RefreshTokenModel
+    RefreshTokenModel,
+    NotificationModel
 )
 from database.models.movies import (
     MovieModel,

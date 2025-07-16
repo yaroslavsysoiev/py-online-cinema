@@ -16,5 +16,7 @@ from schemas.accounts import (
     UserLoginRequestSchema,
     TokenRefreshRequestSchema,
     TokenRefreshResponseSchema,
-    ResendActivationRequestSchema
+    ResendActivationRequestSchema,
+    NotificationSchema,
+    NotificationUpdateSchema
 )

@@ -101,6 +101,9 @@ class UserModel(Base):
     favorite_movies: Mapped[List["FavoriteMovieModel"]] = relationship(
         "FavoriteMovieModel", back_populates="user", cascade="all, delete-orphan"
     )
+    notifications: Mapped[List["NotificationModel"]] = relationship(
+        "NotificationModel", back_populates="user", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<UserModel(id={self.id}, email={self.email}, is_active={self.is_active})>"
@@ -235,3 +238,23 @@ class RefreshTokenModel(TokenBaseModel):
 
     def __repr__(self):
         return f"<RefreshTokenModel(id={self.id}, token={self.token}, expires_at={self.expires_at})>"
+
+
+class NotificationModel(Base):
+    __tablename__ = "notifications"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    notification_type: Mapped[str] = mapped_column(String(50), nullable=False)  # 'comment_reply', 'comment_like', etc.
+    related_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # ID коментаря, фільму, тощо
+
+    user: Mapped[UserModel] = relationship("UserModel", back_populates="notifications")
+
+    def __repr__(self):
+        return f"<NotificationModel(id={self.id}, user_id={self.user_id}, type={self.notification_type})>"
