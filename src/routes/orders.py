@@ -4,6 +4,8 @@ from sqlalchemy import select, and_, or_
 from database import get_db, CartModel, CartItemModel, PurchasedMovieModel, MovieModel, OrderModel, OrderItemModel, OrderStatusEnum
 from schemas.movies import OrderSchema, OrderCreateSchema, OrderItemSchema
 from config.dependencies import get_current_user
+import datetime
+from utils.email import send_email
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -120,4 +122,45 @@ async def cancel_order(
     order.status = OrderStatusEnum.CANCELLED
     await db.commit()
     await db.refresh(order)
+    return order 
+
+@router.post("/{order_id}/pay", response_model=OrderSchema, summary="Pay for order", description="Simulate payment for a pending order. Moves movies to purchased list and sends email confirmation.")
+async def pay_for_order(
+    order_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    order = await db.get(OrderModel, order_id)
+    if not order or order.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Order not found.")
+    
+    if order.status != OrderStatusEnum.PENDING:
+        raise HTTPException(status_code=400, detail="Only pending orders can be paid for.")
+    
+    # Update order status
+    order.status = OrderStatusEnum.PAID
+    
+    # Move movies to purchased list
+    for item in order.items:
+        purchased_movie = PurchasedMovieModel(
+            user_id=current_user.id,
+            movie_id=item.movie_id,
+            purchased_at=datetime.datetime.utcnow()
+        )
+        db.add(purchased_movie)
+    
+    await db.commit()
+    await db.refresh(order)
+    
+    # Send email confirmation
+    try:
+        await send_email(
+            subject="Order Payment Confirmation",
+            recipient=current_user.email,
+            body=f"Your order #{order.id} has been successfully paid. Total amount: ${order.total_amount}. Thank you for your purchase!"
+        )
+    except Exception as e:
+        # Log error but don't fail the payment
+        print(f"Failed to send email confirmation: {e}")
+    
     return order 
