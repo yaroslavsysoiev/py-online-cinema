@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
 from database import get_db, CartModel, CartItemModel, PurchasedMovieModel, MovieModel, OrderModel, OrderItemModel, OrderStatusEnum
 from schemas.movies import OrderSchema, OrderCreateSchema, OrderItemSchema
-from config.dependencies import get_current_user
+from config.dependencies import get_current_user, get_current_admin
 import datetime
 from utils.email import send_email
+from typing import Optional
+from database import UserModel
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -164,3 +166,28 @@ async def pay_for_order(
         print(f"Failed to send email confirmation: {e}")
     
     return order 
+
+@router.get("/admin/orders/", response_model=list[OrderSchema], summary="Admin: List all orders", description="Get all orders with optional filters (admin only)")
+async def admin_list_orders(
+    status: Optional[OrderStatusEnum] = Query(None, description="Filter by order status"),
+    user_id: Optional[int] = Query(None, description="Filter by user ID"),
+    start_date: Optional[datetime.date] = Query(None, description="Filter orders from this date"),
+    end_date: Optional[datetime.date] = Query(None, description="Filter orders until this date"),
+    db: AsyncSession = Depends(get_db),
+    current_admin: UserModel = Depends(get_current_admin),
+):
+    stmt = select(OrderModel)
+    
+    if status:
+        stmt = stmt.where(OrderModel.status == status)
+    if user_id:
+        stmt = stmt.where(OrderModel.user_id == user_id)
+    if start_date:
+        stmt = stmt.where(OrderModel.created_at >= start_date)
+    if end_date:
+        stmt = stmt.where(OrderModel.created_at <= end_date)
+    
+    stmt = stmt.order_by(OrderModel.created_at.desc())
+    result = await db.execute(stmt)
+    orders = result.scalars().all()
+    return orders 
