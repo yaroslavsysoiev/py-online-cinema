@@ -103,3 +103,21 @@ async def get_order_details(
     if not order or order.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Order not found.")
     return order 
+
+@router.post("/{order_id}/cancel", response_model=OrderSchema, summary="Cancel order", description="Cancel a pending order. Only pending orders can be cancelled.")
+async def cancel_order(
+    order_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    order = await db.get(OrderModel, order_id)
+    if not order or order.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Order not found.")
+    
+    if order.status != OrderStatusEnum.PENDING:
+        raise HTTPException(status_code=400, detail="Only pending orders can be cancelled.")
+    
+    order.status = OrderStatusEnum.CANCELLED
+    await db.commit()
+    await db.refresh(order)
+    return order 
