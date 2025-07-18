@@ -329,3 +329,32 @@ class PurchasedMovieSchema(BaseModel):
 
 class CartItemCreateSchema(BaseModel):
     movie_id: int
+
+class OrderItemSchema(BaseModel):
+    id: int
+    movie_id: int
+    price_at_order: float
+    movie: MovieListItemSchema
+
+    model_config = {
+        "from_attributes": True
+    }
+
+class OrderSchema(BaseModel):
+    id: int
+    user_id: int
+    created_at: datetime
+    status: str
+    total_amount: float
+    items: list[OrderItemSchema]
+
+    model_config = {
+        "from_attributes": True
+    }
+
+class OrderCreateSchema(BaseModel):
+    # Можна залишити порожнім, бо створення йде з кошика
+    pass
+
+class OrderListSchema(BaseModel):
+    orders: list[OrderSchema]
