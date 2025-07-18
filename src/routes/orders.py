@@ -92,3 +92,14 @@ async def list_user_orders(
     result = await db.execute(stmt)
     orders = result.scalars().all()
     return orders 
+
+@router.get("/{order_id}", response_model=OrderSchema, summary="Get order details", description="Get details of a specific order for the current user.")
+async def get_order_details(
+    order_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    order = await db.get(OrderModel, order_id)
+    if not order or order.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Order not found.")
+    return order 
