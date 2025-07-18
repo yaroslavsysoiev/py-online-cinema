@@ -82,3 +82,13 @@ async def create_order_from_cart(
     order_dict = OrderSchema.model_validate(order).model_dump()
     order_dict["excluded_movies"] = excluded_movies
     return order_dict 
+
+@router.get("/", response_model=list[OrderSchema], summary="List user orders", description="Get all orders for the current user.")
+async def list_user_orders(
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    stmt = select(OrderModel).where(OrderModel.user_id == current_user.id).order_by(OrderModel.created_at.desc())
+    result = await db.execute(stmt)
+    orders = result.scalars().all()
+    return orders 
