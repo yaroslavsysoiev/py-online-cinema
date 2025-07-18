@@ -244,6 +244,7 @@ class MovieCommentLikeCountSchema(BaseModel):
 class MovieRatingCreateSchema(BaseModel):
     rating: int = Field(..., ge=1, le=10)
 
+
 class MovieRatingResponseSchema(BaseModel):
     user_id: int
     movie_id: int
@@ -253,10 +254,12 @@ class MovieRatingResponseSchema(BaseModel):
         "from_attributes": True
     }
 
+
 class MovieRatingAverageSchema(BaseModel):
     movie_id: int
     average_rating: float
     ratings_count: int
+
 
 class DirectorSchema(BaseModel):
     id: int
@@ -271,11 +274,14 @@ class DirectorSchema(BaseModel):
         }
     }
 
+
 class DirectorCreateSchema(BaseModel):
     name: str
 
+
 class DirectorUpdateSchema(BaseModel):
     name: str
+
 
 class CertificationSchema(BaseModel):
     id: int
@@ -290,11 +296,14 @@ class CertificationSchema(BaseModel):
         }
     }
 
+
 class CertificationCreateSchema(BaseModel):
     name: str
 
+
 class CertificationUpdateSchema(BaseModel):
     name: str
+
 
 class CartItemSchema(BaseModel):
     id: int
@@ -306,6 +315,7 @@ class CartItemSchema(BaseModel):
         "from_attributes": True
     }
 
+
 class CartSchema(BaseModel):
     id: int
     user_id: int
@@ -315,6 +325,7 @@ class CartSchema(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
 
 class PurchasedMovieSchema(BaseModel):
     id: int
@@ -327,8 +338,10 @@ class PurchasedMovieSchema(BaseModel):
         "from_attributes": True
     }
 
+
 class CartItemCreateSchema(BaseModel):
     movie_id: int
+
 
 class OrderItemSchema(BaseModel):
     id: int
@@ -339,6 +352,7 @@ class OrderItemSchema(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
 
 class OrderSchema(BaseModel):
     id: int
@@ -352,9 +366,10 @@ class OrderSchema(BaseModel):
         "from_attributes": True
     }
 
+
 class OrderCreateSchema(BaseModel):
-    # Можна залишити порожнім, бо створення йде з кошика
     pass
+
 
 class OrderListSchema(BaseModel):
     orders: list[OrderSchema]
