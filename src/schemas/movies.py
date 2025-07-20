@@ -373,3 +373,39 @@ class OrderCreateSchema(BaseModel):
 
 class OrderListSchema(BaseModel):
     orders: list[OrderSchema]
+
+
+class PaymentItemSchema(BaseModel):
+    id: int
+    payment_id: int
+    order_item_id: int
+    price_at_payment: float
+
+    model_config = {
+        "from_attributes": True
+    }
+
+
+class PaymentSchema(BaseModel):
+    id: int
+    user_id: int
+    order_id: int
+    created_at: datetime
+    status: str
+    amount: float
+    external_payment_id: Optional[str] = None
+    items: list[PaymentItemSchema]
+
+    model_config = {
+        "from_attributes": True
+    }
+
+
+class PaymentCreateSchema(BaseModel):
+    order_id: int
+    amount: float
+    external_payment_id: Optional[str] = None
+
+
+class PaymentListSchema(BaseModel):
+    payments: list[PaymentSchema]
