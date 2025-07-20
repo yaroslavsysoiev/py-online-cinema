@@ -392,6 +392,7 @@ class OrderModel(Base):
 
     user: Mapped["UserModel"] = relationship("UserModel", back_populates="orders")
     items: Mapped[List["OrderItemModel"]] = relationship("OrderItemModel", back_populates="order", cascade="all, delete-orphan")
+    payments: Mapped[List["PaymentModel"]] = relationship("PaymentModel", back_populates="order", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<OrderModel(id={self.id}, user_id={self.user_id}, status={self.status})>"
@@ -406,6 +407,46 @@ class OrderItemModel(Base):
 
     order: Mapped["OrderModel"] = relationship("OrderModel", back_populates="items")
     movie: Mapped["MovieModel"] = relationship("MovieModel", back_populates="order_items")
+    payment_items: Mapped[List["PaymentItemModel"]] = relationship("PaymentItemModel", back_populates="order_item", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<OrderItemModel(id={self.id}, order_id={self.order_id}, movie_id={self.movie_id})>"
+
+class PaymentStatusEnum(str, Enum):
+    SUCCESSFUL = "successful"
+    CANCELED = "canceled"
+    REFUNDED = "refunded"
+
+
+class PaymentModel(Base):
+    __tablename__ = "payments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    status: Mapped[PaymentStatusEnum] = mapped_column(SQLAlchemyEnum(PaymentStatusEnum), default=PaymentStatusEnum.SUCCESSFUL, nullable=False)
+    amount: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False)
+    external_payment_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
+    user: Mapped["UserModel"] = relationship("UserModel", back_populates="payments")
+    order: Mapped["OrderModel"] = relationship("OrderModel", back_populates="payments")
+    items: Mapped[List["PaymentItemModel"]] = relationship("PaymentItemModel", back_populates="payment", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<Payment(id={self.id}, user_id={self.user_id}, order_id={self.order_id}, status={self.status}, amount={self.amount})>"
+
+
+class PaymentItemModel(Base):
+    __tablename__ = "payment_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    payment_id: Mapped[int] = mapped_column(ForeignKey("payments.id", ondelete="CASCADE"), nullable=False)
+    order_item_id: Mapped[int] = mapped_column(ForeignKey("order_items.id", ondelete="CASCADE"), nullable=False)
+    price_at_payment: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False)
+
+    payment: Mapped["PaymentModel"] = relationship("PaymentModel", back_populates="items")
+    order_item: Mapped["OrderItemModel"] = relationship("OrderItemModel", back_populates="payment_items")
+
+    def __repr__(self):
+        return f"<PaymentItem(id={self.id}, payment_id={self.payment_id}, order_item_id={self.order_item_id}, price_at_payment={self.price_at_payment})>"
