@@ -22,6 +22,9 @@ from database.models.movies import (
     CartModel,
     CartItemModel,
     PurchasedMovieModel,
+    OrderModel,
+    OrderItemModel,
+    OrderStatusEnum,
     PaymentModel,
     PaymentItemModel,
     PaymentStatusEnum
