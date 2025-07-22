@@ -41,6 +41,63 @@ Web platform which gives users opportunity to choose, watch and buy movies or vi
 - **ActivationTokenModel, PasswordResetTokenModel, RefreshTokenModel**: Store tokens with expiration.
 
 
+## Docker & Docker Compose Setup
+
+### Main Services
+- **backend_theater**: FastAPI application (API, business logic)
+- **postgres_theater**: PostgreSQL database
+- **pgadmin_theater**: Web UI for PostgreSQL
+- **mailhog_theater**: SMTP server for email testing (MailHog)
+- **minio-theater**: S3-compatible object storage (MinIO)
+- **minio_mc_theater**: MinIO client for bucket setup
+- **alembic_migrator_theater**: Alembic migrations
+- **redis_theater**: Redis for Celery task queue
+- **celery_worker_theater**: Celery worker for background tasks
+
+### How to Run All Services
+1. **Build and start all containers:**
+   ```bash
+   docker-compose up --build
+   ```
+2. **View logs:**
+   ```bash
+   docker-compose logs -f
+   ```
+3. **Stop all containers:**
+   ```bash
+   docker-compose down
+   ```
+
+### Accessing Services
+| Service         | URL/Port                  | Default Credentials         |
+|----------------|---------------------------|----------------------------|
+| FastAPI API    | http://localhost:8000     | -                          |
+| OpenAPI Docs   | http://localhost:8000/docs| -                          |
+| pgAdmin        | http://localhost:3333     | from .env                  |
+| MailHog UI     | http://localhost:8025     | from .env (admin/admin)    |
+| MinIO Console  | http://localhost:9001     | from .env (minioadmin/...) |
+| Redis          | localhost:6379            | -                          |
+
+### Environment Variables
+- See `.env.example` for all required variables (Postgres, MinIO, MailHog, etc).
+- Copy `.env.example` to `.env` and fill in your values.
+
+### Useful Commands
+- **Apply DB migrations:**
+  ```bash
+  docker-compose exec alembic_migrator_theater alembic upgrade head
+  ```
+- **Run tests:**
+  ```bash
+  pytest
+  ```
+
+### Notes
+- All services are orchestrated via Docker Compose for easy local development.
+- Celery worker and Redis are included for background task processing.
+- MailHog and MinIO are included for email and file storage testing.
+
+
 ## Project Directory Structure
 
 ```
