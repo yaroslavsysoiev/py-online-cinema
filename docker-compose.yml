@@ -122,6 +122,30 @@ services:
     networks:
       - theater_network
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis_theater
+    ports:
+      - "6379:6379"
+    networks:
+      - theater_network
+
+  celery_worker:
+    build: .
+    container_name: celery_worker_theater
+    command: ["celery", "-A", "celery_app.celery_app", "worker", "--loglevel=info"]
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/usr/src/fastapi
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./src:/usr/src/fastapi
+    networks:
+      - theater_network
+
 volumes:
   postgres_theater_data:
     driver: local
