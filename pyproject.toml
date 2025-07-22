@@ -27,6 +27,7 @@ aiosmtplib = "^4.0.1"
 celery = "^5.5.3"
 flower = "^2.0.1"
 alembic = "^1.13.1"
+redis = "^4.0.0"
 
 
 [build-system]
