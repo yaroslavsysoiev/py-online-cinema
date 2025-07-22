@@ -9,7 +9,7 @@ from security.token_manager import JWTAuthManager
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# from database import get_db  # Moved to inside function
+from database import get_db  # <-- FIXED: direct import
 from database.models.accounts import UserModel, UserGroupEnum
 
 
@@ -26,7 +26,7 @@ def get_jwt_auth_manager(settings: BaseAppSettings = Depends(get_settings)) -> J
 
 async def get_current_user(
         request: Request,
-        db: AsyncSession = Depends(lambda: __import__('database').database.get_db()),
+        db: AsyncSession = Depends(get_db),  # <-- FIXED: use direct import
         jwt_manager=Depends(get_jwt_auth_manager)
 ) -> UserModel:
     auth_header = request.headers.get("Authorization")
