@@ -11,6 +11,7 @@ on:
 
 jobs:
   deploy:
+    needs: [test-accounts, test-movies, test-profiles, test-e2e]
     if: github.event.pull_request.merged == true || github.event_name == 'push'
     runs-on: ubuntu-latest
 
@@ -29,5 +30,8 @@ jobs:
 
       - name: Execute Deployment Script on EC2
         run: |
+          # Замініть шлях на актуальний шлях до deploy.sh на сервері
           ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
                 'bash /home/ubuntu/path/to/your/project/commands/deploy.sh'
+
+# Для роботи деплою додайте secrets: EC2_HOST, EC2_USER, EC2_SSH_KEY у GitHub Settings -> Secrets
