@@ -33,7 +33,7 @@ jobs:
 
       - name: Run accounts tests
         run: |
-          poetry run pytest src/tests/test_integration/test_accounts.py
+          poetry run pytest --cov=src --cov-report=xml src/tests/test_integration/test_accounts.py
 
   test-movies:
     runs-on: ubuntu-latest
@@ -62,7 +62,7 @@ jobs:
 
       - name: Run movies tests
         run: |
-          poetry run pytest src/tests/test_integration/test_movies.py
+          poetry run pytest --cov=src --cov-report=xml src/tests/test_integration/test_movies.py
 
   test-profiles:
     runs-on: ubuntu-latest
@@ -91,7 +91,7 @@ jobs:
 
       - name: Run movies tests
         run: |
-          poetry run pytest src/tests/test_integration/test_profiles.py
+          poetry run pytest --cov=src --cov-report=xml src/tests/test_integration/test_profiles.py
 
   test-e2e:
     runs-on: ubuntu-latest
