@@ -31,6 +31,10 @@ jobs:
         run: |
           poetry run mypy src
 
+      - name: Run black
+        run: |
+          poetry run black --check src
+
       - name: Run accounts tests
         run: |
           poetry run pytest --cov=src --cov-report=xml src/tests/test_integration/test_accounts.py
@@ -60,6 +64,10 @@ jobs:
         run: |
           poetry run mypy src
 
+      - name: Run black
+        run: |
+          poetry run black --check src
+
       - name: Run movies tests
         run: |
           poetry run pytest --cov=src --cov-report=xml src/tests/test_integration/test_movies.py
@@ -88,6 +96,10 @@ jobs:
       - name: Run mypy
         run: |
           poetry run mypy src
+
+      - name: Run black
+        run: |
+          poetry run black --check src
 
       - name: Run movies tests
         run: |
