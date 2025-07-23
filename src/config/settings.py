@@ -45,6 +45,10 @@ class TestingSettings(BaseAppSettings):
     SECRET_KEY_ACCESS: str = "SECRET_KEY_ACCESS"
     SECRET_KEY_REFRESH: str = "SECRET_KEY_REFRESH"
     JWT_SIGNING_ALGORITHM: str = "HS256"
+    S3_STORAGE_ENDPOINT: str = "http://localhost:9000"
+    S3_STORAGE_ACCESS_KEY: str = "test-access-key"
+    S3_STORAGE_SECRET_KEY: str = "test-secret-key"
+    S3_BUCKET_NAME: str = "test-bucket"
 
     def model_post_init(self, __context: dict[str, Any] | None = None) -> None:
         object.__setattr__(self, 'PATH_TO_DB', ":memory:")

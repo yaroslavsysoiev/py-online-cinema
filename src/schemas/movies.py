@@ -102,7 +102,7 @@ class MovieDetailSchema(BaseModel):
     genres: List[GenreSchema]
     actors: List[ActorSchema]
     languages: List[LanguageSchema]
-    date: str
+    date: date
 
     model_config = {
         "from_attributes": True,
@@ -229,7 +229,7 @@ class MovieCommentResponseSchema(BaseModel):
         from_attributes = True
 
 
-MovieCommentResponseSchema.update_forward_refs()
+MovieCommentResponseSchema.model_rebuild()
 
 
 class MovieCommentLikeRequestSchema(BaseModel):
