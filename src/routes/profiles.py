@@ -59,12 +59,18 @@ async def create_user_profile(
     current_user: UserModel = Depends(get_current_user),
     s3: S3StorageInterface = Depends(get_s3_storage_client),
 ):
+    # Only the owner can create a profile for themselves
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You are not allowed to create a profile for another user.")
+    # Only active users can create a profile
+    if not current_user.is_active:
+        raise HTTPException(status_code=401, detail="User not found or not active.")
     stmt = select(UserProfileModel).where(UserProfileModel.user_id == user_id)
     result = await db.execute(stmt)
     existing_profile = result.scalars().first()
     if existing_profile:
         raise HTTPException(status_code=400, detail="Profile already exists.")
-    # Зберігаємо аватар у S3
+    # Save avatar to S3
     avatar_file = profile_data.avatar
     avatar_bytes = await avatar_file.read()
     await s3.upload_file(avatar_file.filename, avatar_bytes)
