@@ -98,6 +98,18 @@ class MovieBaseSchema(BaseModel):
 
 class MovieDetailSchema(BaseModel):
     id: int
+    name: str
+    score: float
+    overview: str
+    status: MovieStatusEnum
+    budget: float
+    revenue: float
+    time: int
+    imdb: float
+    votes: int
+    description: str
+    price: float
+    certification_id: int
     country: CountrySchema
     genres: List[GenreSchema]
     actors: List[ActorSchema]

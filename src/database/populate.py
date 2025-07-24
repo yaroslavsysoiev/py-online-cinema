@@ -322,6 +322,14 @@ class CSVDatabaseSeeder:
 
             await self._seed_user_groups()
 
+            # Додаємо сертифікат, якщо його немає
+            from database.models.movies import CertificationModel
+            cert_count = await self._db_session.execute(select(func.count(CertificationModel.id)))
+            if cert_count.scalar() == 0:
+                cert = CertificationModel(name="PG-13")
+                self._db_session.add(cert)
+                await self._db_session.commit()
+
             data = self._preprocess_csv()
 
             country_map, genre_map, actor_map, language_map = await self._prepare_reference_data(data)
