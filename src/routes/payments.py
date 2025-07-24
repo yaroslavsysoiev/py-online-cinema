@@ -3,11 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from database import get_db, PaymentModel, PaymentItemModel, OrderModel, OrderItemModel, PaymentStatusEnum, OrderStatusEnum
 from schemas.movies import PaymentSchema, PaymentCreateSchema, PaymentListSchema
-from config.dependencies import get_current_user, get_current_admin
+from config.dependencies import get_current_user, get_current_admin, get_accounts_email_notificator
 import datetime
 from utils.email import send_email
 from typing import Optional
 from database import UserModel
+from notifications.interfaces import EmailSenderInterface
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 
@@ -17,6 +18,7 @@ async def create_payment(
     payment_data: PaymentCreateSchema,
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user),
+    email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ):
     # Verify the order exists and belongs to the user
     order = await db.get(OrderModel, payment_data.order_id)
@@ -64,10 +66,9 @@ async def create_payment(
         
         # Send email confirmation
         try:
-            await send_email(
-                subject="Payment Confirmation",
-                recipient=current_user.email,
-                body=f"Your payment of ${payment.amount} for order #{order.id} has been processed successfully. Payment ID: {payment.external_payment_id}"
+            await email_sender.send_activation_complete_email(
+                email=current_user.email,
+                login_link=f"/orders/{order.id}"
             )
         except Exception as e:
             print(f"Failed to send payment confirmation email: {e}")
@@ -107,6 +108,7 @@ async def refund_payment(
     payment_id: int,
     db: AsyncSession = Depends(get_db),
     current_admin: UserModel = Depends(get_current_admin),
+    email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ):
     payment = await db.get(PaymentModel, payment_id)
     if not payment:
@@ -123,10 +125,9 @@ async def refund_payment(
         
         # Send refund confirmation email
         try:
-            await send_email(
-                subject="Payment Refund Confirmation",
-                recipient=payment.user.email,
-                body=f"Your payment of ${payment.amount} for order #{payment.order_id} has been refunded. Payment ID: {payment.external_payment_id}"
+            await email_sender.send_password_reset_complete_email(
+                email=payment.user.email,
+                login_link=f"/orders/{payment.order_id}"
             )
         except Exception as e:
             print(f"Failed to send refund confirmation email: {e}")

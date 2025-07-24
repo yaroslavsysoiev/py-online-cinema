@@ -33,6 +33,11 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "unit: Unit tests"
     )
+    # Глобально підміняємо email sender на StubEmailSender для всіх тестів
+    from config.dependencies import get_accounts_email_notificator
+    from tests.doubles.stubs.emails import StubEmailSender
+    from main import app
+    app.dependency_overrides[get_accounts_email_notificator] = lambda: StubEmailSender()
 
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
@@ -47,8 +52,7 @@ async def reset_db(request, db_session):
     if "e2e" in request.keywords:
         yield
     else:
-        await db_session.run_sync(Base.metadata.drop_all, bind=sqlite_engine)
-        await db_session.run_sync(Base.metadata.create_all, bind=sqlite_engine)
+        await reset_database()
         yield
 
 
