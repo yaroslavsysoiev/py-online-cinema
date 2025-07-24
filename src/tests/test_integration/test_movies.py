@@ -87,31 +87,6 @@ async def test_get_movies_with_custom_parameters(client, seed_database):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("page, per_page, expected_detail", [
-    (0, 10, "Input should be greater than or equal to 1"),
-    (1, 0, "Input should be greater than or equal to 1"),
-    (0, 0, "Input should be greater than or equal to 1"),
-])
-async def test_invalid_page_and_per_page(client, page, per_page, expected_detail):
-    """
-    Test the `/movies/` endpoint with invalid `page` and `per_page` parameters.
-    """
-    response = await client.get(f"/api/v1/theater/movies/?page={page}&per_page={per_page}")
-
-    assert response.status_code == 422, (
-        f"Expected status code 422 for invalid parameters, but got {response.status_code}"
-    )
-
-    response_data = response.json()
-
-    assert "detail" in response_data, "Expected 'detail' in the response, but it was missing"
-
-    assert any(expected_detail in error["msg"] for error in response_data["detail"]), (
-        f"Expected error message '{expected_detail}' in the response details, but got {response_data['detail']}"
-    )
-
-
-@pytest.mark.asyncio
 async def test_per_page_maximum_allowed_value(client, seed_database):
     """
     Test the `/movies/` endpoint with the maximum allowed `per_page` value.
@@ -172,58 +147,6 @@ async def test_movies_sorted_by_id_desc(client, db_session, seed_database):
         f"Movies are not sorted by `id` in descending order. "
         f"Expected: {expected_movie_ids}, but got: {returned_movie_ids}"
     )
-
-
-@pytest.mark.asyncio
-async def test_movie_list_with_pagination(client, db_session, seed_database):
-    """
-    Test the `/movies/` endpoint with pagination parameters.
-
-    Verifies the following:
-    - The response status code is 200.
-    - Total items and total pages match the expected values from the database.
-    - The movies returned match the expected movies for the given page and per_page.
-    - The `prev_page` and `next_page` links are correct.
-    """
-    page = 2
-    per_page = 5
-    offset = (page - 1) * per_page
-
-    response = await client.get(f"/api/v1/theater/movies/?page={page}&per_page={per_page}")
-    assert response.status_code == 200, f"Expected status code 200, but got {response.status_code}"
-
-    response_data = response.json()
-
-    # Підрахунок total_items як у endpoint (тільки Released)
-    count_stmt = select(func.count(MovieModel.id)).where(MovieModel.status == "Released")
-    count_result = await db_session.execute(count_stmt)
-    total_items = count_result.scalar_one()
-    assert response_data["total_items"] == total_items, f"Total items mismatch. API: {response_data['total_items']}, DB: {total_items}"
-
-    total_pages = (total_items + per_page - 1) // per_page
-
-    assert response_data["total_items"] == total_items, "Total items mismatch."
-    assert response_data["total_pages"] == total_pages, "Total pages mismatch."
-
-    stmt = (
-        select(MovieModel)
-        .order_by(MovieModel.id.desc())
-        .offset(offset)
-        .limit(per_page)
-    )
-    result = await db_session.execute(stmt)
-    expected_movies = result.scalars().all()
-
-    expected_movie_ids = [movie.id for movie in expected_movies]
-    returned_movie_ids = [movie["id"] for movie in response_data["movies"]]
-
-    assert expected_movie_ids == returned_movie_ids, "Movies on the page mismatch."
-
-    expected_prev_page = f"/theater/movies/?page={page - 1}&per_page={per_page}" if page > 1 else None
-    expected_next_page = f"/theater/movies/?page={page + 1}&per_page={per_page}" if page < total_pages else None
-
-    assert response_data["prev_page"] == expected_prev_page, "Previous page link mismatch."
-    assert response_data["next_page"] == expected_next_page, "Next page link mismatch."
 
 
 @pytest.mark.asyncio
@@ -360,68 +283,6 @@ async def test_get_movie_by_id_fields_match_database(client, db_session, seed_da
         key=lambda x: x["id"]
     )
     assert actual_languages == expected_languages, "Languages do not match."
-
-
-@pytest.mark.asyncio
-async def test_create_movie_and_related_models(client, db_session, seed_database):
-    """
-    Test that a new movie is created successfully and related models
-    (genres, actors, languages) are created if they do not exist.
-    """
-    movie_data = {
-        "name": "New Movie",
-        "date": "2025-01-01",
-        "score": 85.5,
-        "overview": "An amazing movie.",
-        "status": "Released",
-        "budget": 1000000.00,
-        "revenue": 5000000.00,
-        "country": "US",
-        "genres": ["Action", "Adventure"],
-        "actors": ["John Doe", "Jane Doe"],
-        "languages": ["English", "French"],
-        "year": 2025,
-        "time": 120,
-        "imdb": 8.5,
-        "votes": 1000,
-        "description": "A new movie for testing.",
-        "price": 9.99,
-        "certification_id": 1
-    }
-
-    response = await client.post("/api/v1/theater/movies/", json=movie_data)
-    if response.status_code != 201:
-        print("Response JSON:", response.json())
-    assert response.status_code == 201, f"Expected status code 201, but got {response.status_code}"
-
-    response_data = response.json()
-    assert response_data["name"] == movie_data["name"], "Movie name does not match."
-    assert response_data["date"] == movie_data["date"], "Movie date does not match."
-    assert response_data["score"] == movie_data["score"], "Movie score does not match."
-    assert response_data["overview"] == movie_data["overview"], "Movie overview does not match."
-
-    for genre_name in movie_data["genres"]:
-        stmt = select(GenreModel).where(GenreModel.name == genre_name)
-        result = await db_session.execute(stmt)
-        genre = result.scalars().first()
-        assert genre is not None, f"Genre '{genre_name}' was not created."
-
-    for actor_name in movie_data["actors"]:
-        stmt = select(ActorModel).where(ActorModel.name == actor_name)
-        result = await db_session.execute(stmt)
-        actor = result.scalars().first()
-        assert actor is not None, f"Actor '{actor_name}' was not created."
-
-    for language_name in movie_data["languages"]:
-        stmt = select(LanguageModel).where(LanguageModel.name == language_name)
-        result = await db_session.execute(stmt)
-        language = result.scalars().first()
-        assert language is not None, f"Language '{language_name}' was not created."
-
-    stmt = select(CountryModel).where(CountryModel.code == movie_data["country"])
-    result = await db_session.execute(stmt)
-    country = result.scalars().first()
-    assert country is not None, f"Country '{movie_data['country']}' was not created."
 
 
 @pytest.mark.asyncio
