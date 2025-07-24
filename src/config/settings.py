@@ -49,6 +49,12 @@ class TestingSettings(BaseAppSettings):
     S3_STORAGE_ACCESS_KEY: str = "test-access-key"
     S3_STORAGE_SECRET_KEY: str = "test-secret-key"
     S3_BUCKET_NAME: str = "test-bucket"
+    EMAIL_HOST: str = "localhost"
+    EMAIL_PORT: int = 1025
+    EMAIL_HOST_USER: str = "testuser"
+    EMAIL_HOST_PASSWORD: str = "test_password"
+    EMAIL_USE_TLS: bool = False
+    MAILHOG_API_PORT: int = 8025
 
     def model_post_init(self, __context: dict[str, Any] | None = None) -> None:
         object.__setattr__(self, 'PATH_TO_DB', ":memory:")
