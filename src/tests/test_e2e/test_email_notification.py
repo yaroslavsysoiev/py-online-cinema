@@ -4,6 +4,7 @@ from sqlalchemy.orm import joinedload
 from validators import url as validate_url
 import pytest
 import httpx
+from httpx import BasicAuth
 from bs4 import BeautifulSoup
 import os
 
@@ -49,7 +50,8 @@ async def test_registration(e2e_client, reset_db_once_for_e2e, settings, seed_us
     assert response_data["email"] == user_data["email"]
 
     mailhog_url = f"http://{settings.EMAIL_HOST}:{settings.MAILHOG_API_PORT}/api/v2/messages"
-    async with httpx.AsyncClient() as client:
+    auth = BasicAuth("admin", "some_password")
+    async with httpx.AsyncClient(auth=auth) as client:
         mailhog_response = await client.get(mailhog_url)
 
     await e2e_db_session.commit()
@@ -127,7 +129,8 @@ async def test_account_activation(e2e_client, settings, e2e_db_session):
     assert activated_user.is_active, f"User {user_email} is not active!"
 
     mailhog_url = f"http://{settings.EMAIL_HOST}:{settings.MAILHOG_API_PORT}/api/v2/messages"
-    async with httpx.AsyncClient() as client:
+    auth = BasicAuth("admin", "some_password")
+    async with httpx.AsyncClient(auth=auth) as client:
         mailhog_response = await client.get(mailhog_url)
     assert mailhog_response.status_code == 200, "Failed to fetch emails from MailHog!"
     messages = mailhog_response.json()["items"]
@@ -239,7 +242,8 @@ async def test_request_password_reset(e2e_client, e2e_db_session, settings):
     assert reset_token, f"Password reset token for email {user_email} was not created!"
 
     mailhog_url = f"http://{settings.EMAIL_HOST}:{settings.MAILHOG_API_PORT}/api/v2/messages"
-    async with httpx.AsyncClient() as client:
+    auth = BasicAuth("admin", "some_password")
+    async with httpx.AsyncClient(auth=auth) as client:
         mailhog_response = await client.get(mailhog_url)
 
     assert mailhog_response.status_code == 200, "Failed to fetch emails from MailHog!"
@@ -334,7 +338,8 @@ async def test_reset_password(e2e_client, e2e_db_session, settings):
     await e2e_db_session.commit()
 
     mailhog_url = f"http://{settings.EMAIL_HOST}:{settings.MAILHOG_API_PORT}/api/v2/messages"
-    async with httpx.AsyncClient() as client:
+    auth = BasicAuth("admin", "some_password")
+    async with httpx.AsyncClient(auth=auth) as client:
         mailhog_response = await client.get(mailhog_url)
 
     assert mailhog_response.status_code == 200, "Failed to fetch emails from MailHog!"
