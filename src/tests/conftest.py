@@ -140,7 +140,7 @@ async def e2e_client():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def db_session():
+async def db_session(create_all_tables):
     """
     Provide an async database session for database interactions.
 
@@ -152,7 +152,7 @@ async def db_session():
 
 
 @pytest_asyncio.fixture(scope="session")
-async def e2e_db_session(create_all_tables_for_e2e):
+async def e2e_db_session(create_all_tables):
     """
     Provide an async database session for end-to-end tests.
 
@@ -163,6 +163,11 @@ async def e2e_db_session(create_all_tables_for_e2e):
     """
     async with get_db_contextmanager() as session:
         yield session
+
+
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def e2e_client_with_tables(create_all_tables, e2e_client):
+    yield e2e_client
 
 
 @pytest_asyncio.fixture(scope="function")
