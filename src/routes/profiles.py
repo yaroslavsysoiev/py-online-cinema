@@ -36,7 +36,10 @@ async def create_profile(
     # Зберігаємо аватар у S3
     avatar_file = profile_data.avatar
     avatar_bytes = await avatar_file.read()
-    await s3.upload_file(avatar_file.filename, avatar_bytes)
+    try:
+        await s3.upload_file(avatar_file.filename, avatar_bytes)
+    except S3FileUploadError:
+        raise HTTPException(status_code=500, detail="Failed to upload avatar. Please try again later.")
     avatar_url = await s3.get_file_url(avatar_file.filename)
     profile = UserProfileModel(
         user_id=current_user.id,
