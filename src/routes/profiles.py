@@ -59,9 +59,10 @@ async def create_user_profile(
     current_user: UserModel = Depends(get_current_user),
     s3: S3StorageInterface = Depends(get_s3_storage_client),
 ):
-    # Only the owner can create a profile for themselves
-    if user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="You are not allowed to create a profile for another user.")
+    # Only the owner or admin can create a profile for a user
+    is_admin = getattr(current_user, 'group_id', None) == 3
+    if user_id != current_user.id and not is_admin:
+        raise HTTPException(status_code=403, detail="You don't have permission to edit this profile.")
     # Only active users can create a profile
     if not current_user.is_active:
         raise HTTPException(status_code=401, detail="User not found or not active.")
@@ -69,12 +70,12 @@ async def create_user_profile(
     result = await db.execute(stmt)
     existing_profile = result.scalars().first()
     if existing_profile:
-        raise HTTPException(status_code=400, detail="Profile already exists.")
+        raise HTTPException(status_code=400, detail="User already has a profile.")
     # Save avatar to S3
     avatar_file = profile_data.avatar
     avatar_bytes = await avatar_file.read()
-    await s3.upload_file(avatar_file.filename, avatar_bytes)
-    avatar_url = await s3.get_file_url(avatar_file.filename)
+    avatar_key = f"avatars/{user_id}_avatar.jpg"
+    await s3.upload_file(avatar_key, avatar_bytes)
     profile = UserProfileModel(
         user_id=user_id,
         first_name=profile_data.first_name,
@@ -82,12 +83,16 @@ async def create_user_profile(
         gender=profile_data.gender,
         date_of_birth=profile_data.date_of_birth,
         info=profile_data.info,
-        avatar=avatar_url,
+        avatar=avatar_key,  # Store only the key in DB
     )
     db.add(profile)
     await db.commit()
     await db.refresh(profile)
-    return ProfileResponseSchema.model_validate(profile, from_attributes=True)
+    # Return response with avatar URL
+    avatar_url = await s3.get_file_url(avatar_key)
+    response = ProfileResponseSchema.model_validate(profile, from_attributes=True).model_dump()
+    response["avatar"] = avatar_url
+    return response
 
 @router.get("/users/{user_id}/profile/", response_model=ProfileResponseSchema)
 async def get_user_profile(

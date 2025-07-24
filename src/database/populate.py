@@ -272,40 +272,42 @@ class CSVDatabaseSeeder:
         """
         Prepare three lists of dictionaries: movie-genre, movie-actor, and movie-language
         associations for all movies in the DataFrame.
-
-        :param data: The DataFrame containing movie info.
-        :param movie_ids: The list of newly inserted movie IDs, in the same order as DataFrame rows.
-        :param genre_map: A mapping of genre names to GenreModel instances.
-        :param actor_map: A mapping of actor names to ActorModel instances.
-        :param language_map: A mapping of language names to LanguageModel instances.
-        :return: A tuple of three lists:
-                 (movie_genres_data, movie_actors_data, movie_languages_data),
-                 each containing dictionaries for bulk insertion.
+        Ensures that each movie has at least one genre, actor, and language (adds default if missing).
         """
         movie_genres_data: List[Dict[str, int]] = []
         movie_actors_data: List[Dict[str, int]] = []
         movie_languages_data: List[Dict[str, int]] = []
 
+        default_genre = next(iter(genre_map.values())) if genre_map else None
+        default_actor = next(iter(actor_map.values())) if actor_map else None
+        default_language = next(iter(language_map.values())) if language_map else None
+
         for i, (_, row) in enumerate(tqdm(data.iterrows(), total=data.shape[0], desc="Processing associations")):
             movie_id = movie_ids[i]
 
-            for genre_name in row['genre'].split(','):
-                genre_name = genre_name.strip()
-                if genre_name:
-                    genre = genre_map[genre_name]
-                    movie_genres_data.append({"movie_id": movie_id, "genre_id": genre.id})
+            # Genres
+            genres = [g.strip() for g in row['genre'].split(',') if g.strip() and g.strip() in genre_map]
+            if not genres and default_genre:
+                genres = [getattr(default_genre, 'name', 'Drama')]
+            for genre_name in genres:
+                genre = genre_map[genre_name]
+                movie_genres_data.append({"movie_id": movie_id, "genre_id": genre.id})
 
-            for actor_name in row['crew'].split(','):
-                actor_name = actor_name.strip()
-                if actor_name:
-                    actor = actor_map[actor_name]
-                    movie_actors_data.append({"movie_id": movie_id, "actor_id": actor.id})
+            # Actors
+            actors = [a.strip() for a in row['crew'].split(',') if a.strip() and a.strip() in actor_map]
+            if not actors and default_actor:
+                actors = [getattr(default_actor, 'name', 'Unknown Actor')]
+            for actor_name in actors:
+                actor = actor_map[actor_name]
+                movie_actors_data.append({"movie_id": movie_id, "actor_id": actor.id})
 
-            for lang_name in row['orig_lang'].split(','):
-                lang_name = lang_name.strip()
-                if lang_name:
-                    language = language_map[lang_name]
-                    movie_languages_data.append({"movie_id": movie_id, "language_id": language.id})
+            # Languages
+            langs = [l.strip() for l in row['orig_lang'].split(',') if l.strip() and l.strip() in language_map]
+            if not langs and default_language:
+                langs = [getattr(default_language, 'name', 'English')]
+            for lang_name in langs:
+                language = language_map[lang_name]
+                movie_languages_data.append({"movie_id": movie_id, "language_id": language.id})
 
         return movie_genres_data, movie_actors_data, movie_languages_data
 
