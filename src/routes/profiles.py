@@ -5,6 +5,7 @@ from database import get_db, UserProfileModel, UserModel
 from schemas.profiles import ProfileCreateSchema, ProfileResponseSchema
 from config.dependencies import get_current_user, get_s3_storage_client
 from storages import S3StorageInterface
+from exceptions import S3FileUploadError
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
@@ -71,11 +72,14 @@ async def create_user_profile(
     existing_profile = result.scalars().first()
     if existing_profile:
         raise HTTPException(status_code=400, detail="User already has a profile.")
-    # Save avatar to S3
-    avatar_file = profile_data.avatar
-    avatar_bytes = await avatar_file.read()
-    avatar_key = f"avatars/{user_id}_avatar.jpg"
-    await s3.upload_file(avatar_key, avatar_bytes)
+    try:
+        # Save avatar to S3
+        avatar_file = profile_data.avatar
+        avatar_bytes = await avatar_file.read()
+        avatar_key = f"avatars/{user_id}_avatar.jpg"
+        await s3.upload_file(avatar_key, avatar_bytes)
+    except S3FileUploadError:
+        raise HTTPException(status_code=500, detail="Failed to upload avatar. Please try again later.")
     profile = UserProfileModel(
         user_id=user_id,
         first_name=profile_data.first_name,

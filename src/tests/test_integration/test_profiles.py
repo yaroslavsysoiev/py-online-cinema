@@ -440,13 +440,12 @@ async def test_profile_creation_fails_on_s3_upload_error(
         "avatar": ("avatar.jpg", img_bytes, "image/jpeg"),
     }
 
-    with pytest.raises(S3FileUploadError):
+    with patch.object(s3_storage_fake, "upload_file", side_effect=S3FileUploadError()):
         response = await client.post(profile_url, headers=headers, files=files)
-
-    assert response.status_code == 500, f"Expected 500, got {response.status_code}"
-    assert response.json()["detail"] == "Failed to upload avatar. Please try again later.", (
-        f"Unexpected error message: {response.json()['detail']}"
-    )
+        assert response.status_code == 500, f"Expected 500, got {response.status_code}"
+        assert response.json()["detail"] == "Failed to upload avatar. Please try again later.", (
+            f"Unexpected error message: {response.json()['detail']}"
+        )
 
     stmt_profile = select(UserProfileModel).where(UserProfileModel.user_id == user.id)
     result_profile = await db_session.execute(stmt_profile)

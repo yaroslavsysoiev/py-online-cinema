@@ -152,7 +152,7 @@ async def db_session():
 
 
 @pytest_asyncio.fixture(scope="session")
-async def e2e_db_session():
+async def e2e_db_session(create_all_tables_for_e2e):
     """
     Provide an async database session for end-to-end tests.
 
@@ -228,3 +228,33 @@ async def seed_database(db_session):
         await seeder.seed()
 
     yield db_session
+
+
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def create_all_tables():
+    """
+    Створює всі таблиці у тестовій базі перед запуском тестів (один раз за сесію).
+    """
+    async with sqlite_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+
+
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def create_all_tables_e2e():
+    """
+    Створює всі таблиці у тестовій БД для e2e-тестів (один раз за сесію).
+    """
+    async with sqlite_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+
+
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def create_all_tables_for_e2e():
+    """
+    Створює всі таблиці у тестовій БД для e2e-тестів (один раз за сесію).
+    """
+    async with sqlite_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield

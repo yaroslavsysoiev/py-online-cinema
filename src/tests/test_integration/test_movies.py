@@ -194,11 +194,10 @@ async def test_movie_list_with_pagination(client, db_session, seed_database):
 
     response_data = response.json()
 
-    # Якщо endpoint повертає лише фільми зі статусом Released, враховувати це у підрахунку
-    count_stmt = select(func.count(MovieModel.id))
+    # Підрахунок total_items як у endpoint (тільки Released)
+    count_stmt = select(func.count(MovieModel.id)).where(MovieModel.status == "Released")
     count_result = await db_session.execute(count_stmt)
     total_items = count_result.scalar_one()
-    # Якщо у відповіді total_items не співпадає, вивести для дебагу
     assert response_data["total_items"] == total_items, f"Total items mismatch. API: {response_data['total_items']}, DB: {total_items}"
 
     total_pages = (total_items + per_page - 1) // per_page
@@ -381,6 +380,7 @@ async def test_create_movie_and_related_models(client, db_session, seed_database
         "genres": ["Action", "Adventure"],
         "actors": ["John Doe", "Jane Doe"],
         "languages": ["English", "French"],
+        "year": 2025,
         "time": 120,
         "imdb": 8.5,
         "votes": 1000,
@@ -390,6 +390,8 @@ async def test_create_movie_and_related_models(client, db_session, seed_database
     }
 
     response = await client.post("/api/v1/theater/movies/", json=movie_data)
+    if response.status_code != 201:
+        print("Response JSON:", response.json())
     assert response.status_code == 201, f"Expected status code 201, but got {response.status_code}"
 
     response_data = response.json()
