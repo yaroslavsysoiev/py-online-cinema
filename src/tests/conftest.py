@@ -19,8 +19,8 @@ from security.token_manager import JWTAuthManager
 from storages import S3StorageClient
 from tests.doubles.fakes.storage import FakeS3Storage
 from tests.doubles.stubs.emails import StubEmailSender
-from src.database.models.base import Base
-from src.database.session_sqlite import sqlite_engine
+from database.models.base import Base
+from database.session_sqlite import sqlite_engine
 
 
 def pytest_configure(config):
@@ -33,11 +33,6 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "unit: Unit tests"
     )
-    # Глобально підміняємо email sender на StubEmailSender для всіх тестів
-    from config.dependencies import get_accounts_email_notificator
-    from tests.doubles.stubs.emails import StubEmailSender
-    from main import app
-    app.dependency_overrides[get_accounts_email_notificator] = lambda: StubEmailSender()
 
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
@@ -112,7 +107,7 @@ async def s3_client(settings):
     )
 
 
-@pytest_asyncio.fixture(scope="function", autouse=True)
+@pytest_asyncio.fixture(scope="function")
 async def client(email_sender_stub, s3_storage_fake):
     """
     Provide an asynchronous HTTP client for testing.
@@ -129,12 +124,15 @@ async def client(email_sender_stub, s3_storage_fake):
 
 
 @pytest_asyncio.fixture(scope="session")
-async def e2e_client():
+async def e2e_client(settings):
     """
     Provide an asynchronous HTTP client for end-to-end tests.
 
     This client is available at the session scope.
     """
+    # For e2e tests we DON'T use dependency overrides,
+    # so real services (EmailSender, S3StorageClient) are used
+    
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as async_client:
         yield async_client
 
@@ -239,26 +237,6 @@ async def seed_database(db_session):
 async def create_all_tables():
     """
     Створює всі таблиці у тестовій базі перед запуском тестів (один раз за сесію).
-    """
-    async with sqlite_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield
-
-
-@pytest_asyncio.fixture(scope="session", autouse=True)
-async def create_all_tables_e2e():
-    """
-    Створює всі таблиці у тестовій БД для e2e-тестів (один раз за сесію).
-    """
-    async with sqlite_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield
-
-
-@pytest_asyncio.fixture(scope="session", autouse=True)
-async def create_all_tables_for_e2e():
-    """
-    Створює всі таблиці у тестовій БД для e2e-тестів (один раз за сесію).
     """
     async with sqlite_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

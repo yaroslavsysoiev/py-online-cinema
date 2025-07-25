@@ -1,16 +1,17 @@
 import aioboto3
 import pytest
+import os
 from io import BytesIO
 from PIL import Image
-from sqlalchemy import select
+from sqlalchemy import select, insert
 
-from database import UserModel, UserProfileModel
+from database import UserModel, UserProfileModel, UserGroupEnum, UserGroupModel
 
 
 @pytest.mark.e2e
 @pytest.mark.order(7)
 @pytest.mark.asyncio
-async def test_create_user_profile(e2e_client, e2e_db_session, settings, s3_client):
+async def test_create_user_profile(e2e_client, e2e_db_session, settings, s3_client, seed_user_groups):
     """
     End-to-end test for creating a user profile with avatar upload (async + aioboto3.Session version).
 
@@ -28,6 +29,21 @@ async def test_create_user_profile(e2e_client, e2e_db_session, settings, s3_clie
     stmt_user = select(UserModel).where(UserModel.email == user_email)
     result_user = await e2e_db_session.execute(stmt_user)
     user = result_user.scalars().first()
+    
+    if not user:
+        stmt_group = select(UserGroupModel).where(UserGroupModel.name == UserGroupEnum.USER)
+        result_group = await e2e_db_session.execute(stmt_group)
+        user_group = result_group.scalars().first()
+        
+        user = UserModel.create(email=user_email, raw_password=user_password, group_id=user_group.id)
+        user.is_active = True
+        e2e_db_session.add(user)
+        await e2e_db_session.commit()
+        
+        stmt_user = select(UserModel).where(UserModel.email == user_email)
+        result_user = await e2e_db_session.execute(stmt_user)
+        user = result_user.scalars().first()
+
     assert user, f"User {user_email} should exist!"
 
     login_url = "/api/v1/accounts/login/"
