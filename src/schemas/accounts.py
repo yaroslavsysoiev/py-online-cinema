@@ -9,9 +9,7 @@ class BaseEmailPasswordSchema(BaseModel):
     email: EmailStr
     password: str
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
     @field_validator("email")
     @classmethod
@@ -50,9 +48,7 @@ class UserRegistrationResponseSchema(BaseModel):
     id: int
     email: EmailStr
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 
 class UserActivationRequestSchema(BaseModel):
@@ -86,15 +82,15 @@ class NotificationSchema(BaseModel):
     notification_type: str
     related_id: Optional[int] = None
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
+
 
 class NotificationCreateSchema(BaseModel):
     title: str
     message: str
     notification_type: str
     related_id: Optional[int] = None
+
 
 class NotificationUpdateSchema(BaseModel):
     is_read: bool

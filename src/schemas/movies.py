@@ -13,7 +13,7 @@ from schemas.examples.movies import (
     movie_list_response_schema_example,
     movie_create_schema_example,
     movie_detail_schema_example,
-    movie_update_schema_example
+    movie_update_schema_example,
 )
 
 
@@ -23,11 +23,7 @@ class LanguageSchema(BaseModel):
 
     model_config = {
         "from_attributes": True,
-        "json_schema_extra": {
-            "examples": [
-                language_schema_example
-            ]
-        }
+        "json_schema_extra": {"examples": [language_schema_example]},
     }
 
 
@@ -38,11 +34,7 @@ class CountrySchema(BaseModel):
 
     model_config = {
         "from_attributes": True,
-        "json_schema_extra": {
-            "examples": [
-                country_schema_example
-            ]
-        }
+        "json_schema_extra": {"examples": [country_schema_example]},
     }
 
 
@@ -52,11 +44,7 @@ class GenreSchema(BaseModel):
 
     model_config = {
         "from_attributes": True,
-        "json_schema_extra": {
-            "examples": [
-                genre_schema_example
-            ]
-        }
+        "json_schema_extra": {"examples": [genre_schema_example]},
     }
 
 
@@ -66,11 +54,7 @@ class ActorSchema(BaseModel):
 
     model_config = {
         "from_attributes": True,
-        "json_schema_extra": {
-            "examples": [
-                actor_schema_example
-            ]
-        }
+        "json_schema_extra": {"examples": [actor_schema_example]},
     }
 
 
@@ -83,16 +67,16 @@ class MovieBaseSchema(BaseModel):
     budget: float = Field(..., ge=0)
     revenue: float = Field(..., ge=0)
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
     @field_validator("date")
     @classmethod
     def validate_date(cls, value):
         current_year = datetime.now(timezone.utc).year
         if value.year > current_year + 1:
-            raise ValueError(f"The year in 'date' cannot be greater than {current_year + 1}.")
+            raise ValueError(
+                f"The year in 'date' cannot be greater than {current_year + 1}."
+            )
         return value
 
 
@@ -118,11 +102,7 @@ class MovieDetailSchema(BaseModel):
 
     model_config = {
         "from_attributes": True,
-        "json_schema_extra": {
-            "examples": [
-                movie_detail_schema_example
-            ]
-        }
+        "json_schema_extra": {"examples": [movie_detail_schema_example]},
     }
 
 
@@ -135,11 +115,7 @@ class MovieListItemSchema(BaseModel):
 
     model_config = {
         "from_attributes": True,
-        "json_schema_extra": {
-            "examples": [
-                movie_item_schema_example
-            ]
-        }
+        "json_schema_extra": {"examples": [movie_item_schema_example]},
     }
 
 
@@ -152,11 +128,7 @@ class MovieListResponseSchema(BaseModel):
 
     model_config = {
         "from_attributes": True,
-        "json_schema_extra": {
-            "examples": [
-                movie_list_response_schema_example
-            ]
-        }
+        "json_schema_extra": {"examples": [movie_list_response_schema_example]},
     }
 
 
@@ -175,11 +147,7 @@ class MovieCreateSchema(BaseModel):
 
     model_config = {
         "from_attributes": True,
-        "json_schema_extra": {
-            "examples": [
-                movie_create_schema_example
-            ]
-        }
+        "json_schema_extra": {"examples": [movie_create_schema_example]},
     }
 
     @field_validator("country", mode="before")
@@ -204,11 +172,7 @@ class MovieUpdateSchema(BaseModel):
 
     model_config = {
         "from_attributes": True,
-        "json_schema_extra": {
-            "examples": [
-                movie_update_schema_example
-            ]
-        }
+        "json_schema_extra": {"examples": [movie_update_schema_example]},
     }
 
 
@@ -262,9 +226,7 @@ class MovieRatingResponseSchema(BaseModel):
     movie_id: int
     rating: int
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 
 class MovieRatingAverageSchema(BaseModel):
@@ -279,11 +241,7 @@ class DirectorSchema(BaseModel):
 
     model_config = {
         "from_attributes": True,
-        "json_schema_extra": {
-            "examples": [
-                {"id": 1, "name": "Christopher Nolan"}
-            ]
-        }
+        "json_schema_extra": {"examples": [{"id": 1, "name": "Christopher Nolan"}]},
     }
 
 
@@ -301,11 +259,7 @@ class CertificationSchema(BaseModel):
 
     model_config = {
         "from_attributes": True,
-        "json_schema_extra": {
-            "examples": [
-                {"id": 1, "name": "PG-13"}
-            ]
-        }
+        "json_schema_extra": {"examples": [{"id": 1, "name": "PG-13"}]},
     }
 
 
@@ -323,9 +277,7 @@ class CartItemSchema(BaseModel):
     added_at: datetime
     movie: MovieListItemSchema
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 
 class CartSchema(BaseModel):
@@ -334,9 +286,7 @@ class CartSchema(BaseModel):
     items: list[CartItemSchema]
     total_price: float
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 
 class PurchasedMovieSchema(BaseModel):
@@ -346,9 +296,7 @@ class PurchasedMovieSchema(BaseModel):
     price_paid: float
     movie: MovieListItemSchema
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 
 class CartItemCreateSchema(BaseModel):
@@ -361,9 +309,7 @@ class OrderItemSchema(BaseModel):
     price_at_order: float
     movie: MovieListItemSchema
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 
 class OrderSchema(BaseModel):
@@ -374,9 +320,7 @@ class OrderSchema(BaseModel):
     total_amount: float
     items: list[OrderItemSchema]
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 
 class OrderCreateSchema(BaseModel):
@@ -393,9 +337,7 @@ class PaymentItemSchema(BaseModel):
     order_item_id: int
     price_at_payment: float
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 
 class PaymentSchema(BaseModel):
@@ -408,9 +350,7 @@ class PaymentSchema(BaseModel):
     external_payment_id: Optional[str] = None
     items: list[PaymentItemSchema]
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 
 class PaymentCreateSchema(BaseModel):

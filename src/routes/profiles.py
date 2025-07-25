@@ -9,6 +9,7 @@ from exceptions import S3FileUploadError
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
+
 @router.get("/me", response_model=ProfileResponseSchema)
 async def get_my_profile(
     db: AsyncSession = Depends(get_db),
@@ -21,7 +22,10 @@ async def get_my_profile(
         raise HTTPException(status_code=404, detail="Profile not found.")
     return ProfileResponseSchema.model_validate(profile, from_attributes=True)
 
-@router.post("/", response_model=ProfileResponseSchema, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/", response_model=ProfileResponseSchema, status_code=status.HTTP_201_CREATED
+)
 async def create_profile(
     profile_data: ProfileCreateSchema = Depends(ProfileCreateSchema.from_form),
     db: AsyncSession = Depends(get_db),
@@ -39,7 +43,9 @@ async def create_profile(
     try:
         await s3.upload_file(avatar_file.filename, avatar_bytes)
     except S3FileUploadError:
-        raise HTTPException(status_code=500, detail="Failed to upload avatar. Please try again later.")
+        raise HTTPException(
+            status_code=500, detail="Failed to upload avatar. Please try again later."
+        )
     avatar_url = await s3.get_file_url(avatar_file.filename)
     profile = UserProfileModel(
         user_id=current_user.id,
@@ -55,7 +61,12 @@ async def create_profile(
     await db.refresh(profile)
     return ProfileResponseSchema.model_validate(profile)
 
-@router.post("/users/{user_id}/profile/", response_model=ProfileResponseSchema, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/users/{user_id}/profile/",
+    response_model=ProfileResponseSchema,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_user_profile(
     user_id: int,
     profile_data: ProfileCreateSchema = Depends(ProfileCreateSchema.from_form),
@@ -66,7 +77,9 @@ async def create_user_profile(
     # Only the owner or admin can create a profile for a user
     is_admin = getattr(current_user, 'group_id', None) == 3
     if user_id != current_user.id and not is_admin:
-        raise HTTPException(status_code=403, detail="You don't have permission to edit this profile.")
+        raise HTTPException(
+            status_code=403, detail="You don't have permission to edit this profile."
+        )
     # Only active users can create a profile
     if not current_user.is_active:
         raise HTTPException(status_code=401, detail="User not found or not active.")
@@ -82,7 +95,9 @@ async def create_user_profile(
         avatar_key = f"avatars/{user_id}_avatar.jpg"
         await s3.upload_file(avatar_key, avatar_bytes)
     except S3FileUploadError:
-        raise HTTPException(status_code=500, detail="Failed to upload avatar. Please try again later.")
+        raise HTTPException(
+            status_code=500, detail="Failed to upload avatar. Please try again later."
+        )
     profile = UserProfileModel(
         user_id=user_id,
         first_name=profile_data.first_name,
@@ -97,9 +112,12 @@ async def create_user_profile(
     await db.refresh(profile)
     # Return response with avatar URL
     avatar_url = await s3.get_file_url(avatar_key)
-    response = ProfileResponseSchema.model_validate(profile, from_attributes=True).model_dump()
+    response = ProfileResponseSchema.model_validate(
+        profile, from_attributes=True
+    ).model_dump()
     response["avatar"] = avatar_url
     return response
+
 
 @router.get("/users/{user_id}/profile/", response_model=ProfileResponseSchema)
 async def get_user_profile(
@@ -112,4 +130,4 @@ async def get_user_profile(
     profile = result.scalars().first()
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found.")
-    return ProfileResponseSchema.model_validate(profile, from_attributes=True) 
+    return ProfileResponseSchema.model_validate(profile, from_attributes=True)

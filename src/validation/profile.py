@@ -26,14 +26,18 @@ def validate_image(avatar: UploadFile) -> None:
         avatar.file.seek(0)
         image_format = image.format
         if image_format not in supported_image_formats:
-            raise ValueError(f"Unsupported image format: {image_format}. Use one of next: {supported_image_formats}")
+            raise ValueError(
+                f"Unsupported image format: {image_format}. Use one of next: {supported_image_formats}"
+            )
     except IOError:
         raise ValueError("Invalid image format")
 
 
 def validate_gender(gender: str) -> None:
     if gender not in GenderEnum.__members__.values():
-        raise ValueError(f"Gender must be one of: {', '.join(g.value for g in GenderEnum)}")
+        raise ValueError(
+            f"Gender must be one of: {', '.join(g.value for g in GenderEnum)}"
+        )
 
 
 def validate_birth_date(birth_date: date) -> None:
