@@ -210,6 +210,7 @@ async def request_password_reset_token(
 async def activate_account(
         activation_data: UserActivationRequestSchema,
         db: AsyncSession = Depends(get_db),
+        email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ) -> MessageResponseSchema:
     """
     Endpoint to activate a user's account.
@@ -264,6 +265,15 @@ async def activate_account(
     await db.delete(token_record)
     await db.commit()
 
+    try:
+        login_link = f"https://your-domain.com/login"
+        await email_sender.send_activation_complete_email(
+            email=user.email,
+            login_link=login_link
+        )
+    except Exception as e:
+        print(f"Error sending activation complete email: {e}")
+
     return MessageResponseSchema(message="User account activated successfully.")
 
 
@@ -288,10 +298,8 @@ async def resend_activation_token(
     if user.is_active:
         return MessageResponseSchema(message="Account is already activated.")
 
-    # Удаляем старый токен, если есть
     await db.execute(delete(ActivationTokenModel).where(ActivationTokenModel.user_id == user.id))
 
-    # Создаём новый токен
     activation_token = ActivationTokenModel(user_id=user.id)
     db.add(activation_token)
     await db.commit()
@@ -351,6 +359,7 @@ async def resend_activation_token(
 async def reset_password(
         data: PasswordResetCompleteRequestSchema,
         db: AsyncSession = Depends(get_db),
+        email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ) -> MessageResponseSchema:
     """
     Endpoint for resetting a user's password.
@@ -403,10 +412,18 @@ async def reset_password(
         )
 
     try:
-        hashed = hash_password(data.password)
-        user._hashed_password = hashed
+        user.password = data.password
         await db.run_sync(lambda s: s.delete(token_record))
         await db.commit()
+        
+        try:
+            login_link = f"https://your-domain.com/login"
+            await email_sender.send_password_reset_complete_email(
+                email=user.email,
+                login_link=login_link
+            )
+        except Exception as e:
+            print(f"Error sending password reset complete email: {e}")
     except SQLAlchemyError:
         await db.rollback()
         raise HTTPException(

@@ -136,9 +136,16 @@ async def test_account_activation(e2e_client, settings, e2e_db_session):
     messages = mailhog_response.json()["items"]
     assert len(messages) > 0, "No emails were sent!"
 
-    email = messages[0]
-    assert email["Content"]["Headers"]["To"][0] == user_email, "Recipient email does not match!"
-    email_subject = email["Content"]["Headers"].get("Subject", [None])[0]
+    activation_complete_email = None
+    for email in messages:
+        subject = email["Content"]["Headers"].get("Subject", [None])[0]
+        if subject == "Account Activated Successfully":
+            activation_complete_email = email
+            break
+    
+    assert activation_complete_email is not None, "Email with subject 'Account Activated Successfully' not found!"
+    assert activation_complete_email["Content"]["Headers"]["To"][0] == user_email, "Recipient email does not match!"
+    email_subject = activation_complete_email["Content"]["Headers"].get("Subject", [None])[0]
     assert email_subject == "Account Activated Successfully", \
         f"Expected subject 'Account Activated Successfully', but got '{email_subject}'"
 
@@ -346,13 +353,20 @@ async def test_reset_password(e2e_client, e2e_db_session, settings):
     messages = mailhog_response.json()["items"]
     assert len(messages) > 0, "No emails were sent!"
 
-    email_data = messages[0]
-    assert email_data["Content"]["Headers"]["To"][0] == user_email, "Recipient email does not match!"
-    email_subject = email_data["Content"]["Headers"].get("Subject", [None])[0]
+    password_reset_complete_email = None
+    for email in messages:
+        subject = email["Content"]["Headers"].get("Subject", [None])[0]
+        if subject == "Your Password Has Been Successfully Reset":
+            password_reset_complete_email = email
+            break
+    
+    assert password_reset_complete_email is not None, "Email with subject 'Your Password Has Been Successfully Reset' not found!"
+    assert password_reset_complete_email["Content"]["Headers"]["To"][0] == user_email, "Recipient email does not match!"
+    email_subject = password_reset_complete_email["Content"]["Headers"].get("Subject", [None])[0]
     assert email_subject == "Your Password Has Been Successfully Reset", \
         f"Expected subject 'Your Password Has Been Successfully Reset', but got '{email_subject}'"
 
-    email_html = email_data["Content"]["Body"]
+    email_html = password_reset_complete_email["Content"]["Body"]
     soup = BeautifulSoup(email_html, "html.parser")
 
     email_element = soup.find("strong", id="email")
