@@ -45,21 +45,30 @@ class TestingSettings(BaseAppSettings):
     SECRET_KEY_ACCESS: str = "SECRET_KEY_ACCESS"
     SECRET_KEY_REFRESH: str = "SECRET_KEY_REFRESH"
     JWT_SIGNING_ALGORITHM: str = "HS256"
-    S3_STORAGE_ENDPOINT: str = "http://localhost:9000"
-    S3_STORAGE_ACCESS_KEY: str = "test-access-key"
-    S3_STORAGE_SECRET_KEY: str = "test-secret-key"
-    S3_BUCKET_NAME: str = "test-bucket"
-    EMAIL_HOST: str = "localhost"
-    EMAIL_PORT: int = 1025
-    EMAIL_HOST_USER: str = "testuser"
-    EMAIL_HOST_PASSWORD: str = "test_password"
-    EMAIL_USE_TLS: bool = False
-    MAILHOG_API_PORT: int = 8025
+    S3_STORAGE_ENDPOINT: str = os.getenv("S3_STORAGE_ENDPOINT", "http://localhost:9000")
+    S3_STORAGE_ACCESS_KEY: str = os.getenv("S3_STORAGE_ACCESS_KEY", "minioadmin")
+    S3_STORAGE_SECRET_KEY: str = os.getenv("S3_STORAGE_SECRET_KEY", "some_password")
+    S3_BUCKET_NAME: str = os.getenv("S3_BUCKET_NAME", "theater-storage")
+    EMAIL_HOST: str = os.getenv("EMAIL_HOST", "localhost")
+    EMAIL_PORT: int = int(os.getenv("EMAIL_PORT", "1025"))
+    EMAIL_HOST_USER: str = os.getenv("EMAIL_HOST_USER", "testuser@mate.com")
+    EMAIL_HOST_PASSWORD: str = os.getenv("EMAIL_HOST_PASSWORD", "test_password")
+    EMAIL_USE_TLS: bool = os.getenv("EMAIL_USE_TLS", "False").lower() == "true"
+    MAILHOG_API_PORT: int = int(os.getenv("MAILHOG_API_PORT", "8025"))
 
     def model_post_init(self, __context: dict[str, Any] | None = None) -> None:
-        object.__setattr__(self, 'PATH_TO_DB', ":memory:")
+        object.__setattr__(self, 'PATH_TO_DB', str(self.BASE_DIR / "database" / "source" / "test.db"))
         object.__setattr__(
             self,
             'PATH_TO_MOVIES_CSV',
             str(self.BASE_DIR / "database" / "seed_data" / "test_data.csv")
         )
+        object.__setattr__(
+            self,
+            'PATH_TO_EMAIL_TEMPLATES_DIR',
+            str(self.BASE_DIR / "notifications" / "templates")
+        )
+        object.__setattr__(self, 'ACTIVATION_EMAIL_TEMPLATE_NAME', "activation_request.html")
+        object.__setattr__(self, 'ACTIVATION_COMPLETE_EMAIL_TEMPLATE_NAME', "activation_complete.html")
+        object.__setattr__(self, 'PASSWORD_RESET_TEMPLATE_NAME', "password_reset_request.html")
+        object.__setattr__(self, 'PASSWORD_RESET_COMPLETE_TEMPLATE_NAME', "password_reset_complete.html")
