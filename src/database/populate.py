@@ -10,8 +10,8 @@ from tqdm import tqdm
 import uuid
 from datetime import date, datetime
 
-from config import get_settings
-from database import (
+from src.config import get_settings
+from src.database import (
     CountryModel,
     GenreModel,
     ActorModel,
@@ -23,7 +23,7 @@ from database import (
     UserGroupModel,
     UserGroupEnum,
 )
-from database import get_db_contextmanager
+from src.database import get_db_contextmanager
 
 CHUNK_SIZE = 1000
 
@@ -431,7 +431,7 @@ class CSVDatabaseSeeder:
             await self._seed_user_groups()
 
             # Додаємо сертифікат, якщо його немає
-            from database.models.movies import CertificationModel
+            from src.database.models.movies import CertificationModel
 
             cert_count = await self._db_session.execute(
                 select(func.count(CertificationModel.id))
