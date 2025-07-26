@@ -210,7 +210,7 @@ async def test_get_movie_by_id_not_found(client, db_session, seed_database):
     Test that the `/movies/{movie_id}` endpoint returns a 404 error
     when a movie with the given ID does not exist.
     """
-    # Вибираємо movie_id, якого точно немає
+    # Choose a movie_id that definitely doesn't exist
     stmt_max = select(MovieModel.id).order_by(MovieModel.id.desc()).limit(1)
     result_max = await db_session.execute(stmt_max)
     max_id = result_max.scalars().first() or 0

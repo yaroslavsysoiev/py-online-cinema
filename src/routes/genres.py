@@ -60,7 +60,7 @@ async def delete_genre(genre_id: int, db: AsyncSession = Depends(get_db)):
     await db.commit()
 
 
-# Endpoint для отримання жанрів з кількістю фільмів
+# Endpoint to get genres with movie count
 @router.get("/with-count/", response_model=list[dict])
 async def genres_with_movie_count(db: AsyncSession = Depends(get_db)):
     stmt = (

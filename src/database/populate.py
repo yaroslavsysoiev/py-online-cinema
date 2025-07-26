@@ -430,7 +430,7 @@ class CSVDatabaseSeeder:
 
             await self._seed_user_groups()
 
-            # Додаємо сертифікат, якщо його немає
+            # Add certification if it doesn't exist
             from src.database.models.movies import CertificationModel
 
             cert_count = await self._db_session.execute(

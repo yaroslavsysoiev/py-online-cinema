@@ -74,7 +74,7 @@ MoviesLanguagesModel = Table(
     ),
 )
 
-# --- Додаємо асоціативну таблицю для режисерів ---
+# --- Add association table for directors ---
 DirectorsMoviesModel = Table(
     "directors_movies",
     Base.metadata,
@@ -92,7 +92,7 @@ DirectorsMoviesModel = Table(
     ),
 )
 
-# --- Додаємо асоціативну таблицю для акторів (stars) ---
+# --- Add association table for actors (stars) ---
 StarsMoviesModel = Table(
     "stars_movies",
     Base.metadata,
@@ -335,7 +335,7 @@ class FavoriteMovieModel(Base):
     movie = relationship("MovieModel", back_populates="favorited_by")
 
 
-# --- Додаємо CertificationModel ---
+# --- Add CertificationModel ---
 class CertificationModel(Base):
     __tablename__ = "certifications"
 
@@ -350,7 +350,7 @@ class CertificationModel(Base):
         return f"<Certification(name='{self.name}')>"
 
 
-# --- Додаємо DirectorModel ---
+# --- Add DirectorModel ---
 class DirectorModel(Base):
     __tablename__ = "directors"
 

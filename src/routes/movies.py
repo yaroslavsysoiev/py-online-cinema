@@ -414,7 +414,7 @@ async def delete_movie(
             status_code=404, detail="Movie with the given ID was not found."
         )
 
-    # Перевіряємо, чи купив хтось цей фільм
+    # Check if anyone has purchased this movie
     purchased_stmt = select(PurchasedMovieModel).where(
         PurchasedMovieModel.movie_id == movie_id
     )
@@ -425,13 +425,13 @@ async def delete_movie(
             detail="Cannot delete movie that has been purchased by users.",
         )
 
-    # Перевіряємо, чи є фільм в кошиках користувачів
+    # Check if the movie is in users' carts
     cart_items_stmt = select(CartItemModel).where(CartItemModel.movie_id == movie_id)
     cart_items_result = await db.execute(cart_items_stmt)
     cart_items = cart_items_result.scalars().all()
 
     if cart_items:
-        # Отримуємо список користувачів, у яких фільм в кошику
+        # Get list of users who have the movie in their cart
         user_ids = [item.cart.user_id for item in cart_items]
         user_ids_str = ", ".join(map(str, user_ids))
         raise HTTPException(
@@ -803,7 +803,7 @@ async def get_my_movie_rating(
     return rating_obj
 
 
-# --- CRUD для коментарів до фільмів ---
+    # --- CRUD for movie comments ---
 @router.post(
     "/movies/{movie_id}/comments",
     response_model=MovieCommentResponseSchema,
@@ -963,7 +963,7 @@ async def add_to_cart(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    # Перевіряємо, чи купив користувач цей фільм
+    # Check if user has already purchased this movie
     purchased_stmt = select(PurchasedMovieModel).where(
         PurchasedMovieModel.user_id == current_user.id,
         PurchasedMovieModel.movie_id == data.movie_id,
@@ -974,7 +974,7 @@ async def add_to_cart(
             status_code=400, detail="You have already purchased this movie."
         )
 
-    # Отримуємо або створюємо кошик користувача
+    # Get or create user's cart
     cart_stmt = select(CartModel).where(CartModel.user_id == current_user.id)
     cart_result = await db.execute(cart_stmt)
     cart = cart_result.scalars().first()
@@ -984,7 +984,7 @@ async def add_to_cart(
         db.add(cart)
         await db.flush()
 
-    # Перевіряємо, чи фільм вже в кошику
+    # Check if movie is already in cart
     existing_item_stmt = select(CartItemModel).where(
         CartItemModel.cart_id == cart.id, CartItemModel.movie_id == data.movie_id
     )
@@ -992,13 +992,13 @@ async def add_to_cart(
     if existing_result.scalars().first():
         raise HTTPException(status_code=400, detail="Movie is already in your cart.")
 
-    # Додаємо фільм до кошика
+    # Add movie to cart
     cart_item = CartItemModel(cart_id=cart.id, movie_id=data.movie_id)
     db.add(cart_item)
     await db.commit()
     await db.refresh(cart)
 
-    # Розраховуємо загальну ціну
+    # Calculate total price
     total_price = sum(item.movie.price for item in cart.items)
     return CartSchema(
         id=cart.id, user_id=cart.user_id, items=cart.items, total_price=total_price
@@ -1051,7 +1051,7 @@ async def get_cart(
     cart = cart_result.scalars().first()
 
     if not cart:
-        # Створюємо порожній кошик
+        # Create empty cart
         cart = CartModel(user_id=current_user.id)
         db.add(cart)
         await db.commit()
@@ -1084,23 +1084,23 @@ async def purchase_cart(
     purchased_movies = []
 
     for item in cart.items:
-        # Перевіряємо, чи не купив користувач цей фільм
+        # Check if user hasn't already purchased this movie
         purchased_stmt = select(PurchasedMovieModel).where(
             PurchasedMovieModel.user_id == current_user.id,
             PurchasedMovieModel.movie_id == item.movie_id,
         )
         purchased_result = await db.execute(purchased_stmt)
         if purchased_result.scalars().first():
-            continue  # Пропускаємо вже куплені фільми
+            continue  # Skip already purchased movies
 
-        # Додаємо до куплених
+        # Add to purchased
         purchased_movie = PurchasedMovieModel(
             user_id=current_user.id, movie_id=item.movie_id, price_paid=item.movie.price
         )
         db.add(purchased_movie)
         purchased_movies.append(purchased_movie)
 
-    # Очищаємо кошик
+    # Clear cart
     await db.delete(cart)
     await db.commit()
 

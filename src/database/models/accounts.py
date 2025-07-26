@@ -20,8 +20,8 @@ from src.database.models.base import Base
 from src.database.validators import accounts as validators
 from src.security.passwords import hash_password, verify_password
 from src.security.utils import generate_secure_token
-# Імпорт моделей з movies.py видалений для уникнення циклічних імпортів
-# Використовуємо рядкові посилання в relationship
+# Import of models from movies.py removed to avoid circular imports
+# Using string references in relationships
 
 
 class UserGroupEnum(str, enum.Enum):
@@ -284,7 +284,7 @@ class NotificationModel(Base):
     )  # 'comment_reply', 'comment_like', etc.
     related_id: Mapped[Optional[int]] = mapped_column(
         Integer, nullable=True
-    )  # ID коментаря, фільму, тощо
+    )  # ID of comment, movie, etc.
 
     user: Mapped[UserModel] = relationship("UserModel", back_populates="notifications")
 

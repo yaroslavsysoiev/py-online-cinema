@@ -775,7 +775,7 @@ async def admin_change_user_group(
     return MessageResponseSchema(message=f"User group changed to {data.group.value}.")
 
 
-# --- Endpoint-и для сповіщень ---
+# --- Notification endpoints ---
 @router.get(
     "/notifications/",
     response_model=list[NotificationSchema],

@@ -37,7 +37,7 @@ async def create_profile(
     existing_profile = result.scalars().first()
     if existing_profile:
         raise HTTPException(status_code=400, detail="Profile already exists.")
-    # Зберігаємо аватар у S3
+    # Save avatar to S3
     avatar_file = profile_data.avatar
     avatar_bytes = await avatar_file.read()
     try:
