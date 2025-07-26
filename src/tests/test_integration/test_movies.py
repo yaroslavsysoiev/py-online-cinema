@@ -4,8 +4,8 @@ import pytest
 from sqlalchemy import select, func, delete
 from sqlalchemy.orm import joinedload
 
-from database import MovieModel
-from database import GenreModel, ActorModel, LanguageModel, CountryModel
+from src.database import MovieModel
+from src.database import GenreModel, ActorModel, LanguageModel, CountryModel
 
 
 @pytest.mark.asyncio

@@ -5,9 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, aliased
 from datetime import datetime, date
 
-from database import get_db, MovieModel
-from database import CountryModel, GenreModel, ActorModel, LanguageModel
-from database.models.movies import (
+from src.database import get_db, MovieModel
+from src.database import CountryModel, GenreModel, ActorModel, LanguageModel
+from src.database.models.movies import (
     MovieLikeModel,
     FavoriteMovieModel,
     MovieRatingModel,
@@ -18,8 +18,8 @@ from database.models.movies import (
     CartItemModel,
     PurchasedMovieModel,
 )
-from schemas import MovieListResponseSchema, MovieListItemSchema, MovieDetailSchema
-from schemas.movies import (
+from src.schemas import MovieListResponseSchema, MovieListItemSchema, MovieDetailSchema
+from src.schemas.movies import (
     MovieCreateSchema,
     MovieUpdateSchema,
     MovieLikeRequestSchema,
@@ -35,7 +35,7 @@ from schemas.movies import (
     CartSchema,
     PurchasedMovieSchema,
 )
-from config.dependencies import get_current_user
+from src.config.dependencies import get_current_user
 
 router = APIRouter()
 

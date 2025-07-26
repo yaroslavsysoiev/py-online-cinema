@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from database import get_db
-from database.models.movies import DirectorModel
-from schemas.movies import DirectorSchema, DirectorCreateSchema, DirectorUpdateSchema
+from src.database import get_db
+from src.database.models.movies import DirectorModel
+from src.schemas.movies import DirectorSchema, DirectorCreateSchema, DirectorUpdateSchema
 
 router = APIRouter(prefix="/directors", tags=["directors"])
 

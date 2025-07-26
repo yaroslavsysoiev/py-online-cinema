@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from database import (
+from src.database import (
     get_db,
     PaymentModel,
     PaymentItemModel,
@@ -10,17 +10,17 @@ from database import (
     PaymentStatusEnum,
     OrderStatusEnum,
 )
-from schemas.movies import PaymentSchema, PaymentCreateSchema, PaymentListSchema
-from config.dependencies import (
+from src.schemas.movies import PaymentSchema, PaymentCreateSchema, PaymentListSchema
+from src.config.dependencies import (
     get_current_user,
     get_current_admin,
     get_accounts_email_notificator,
 )
 import datetime
-from utils.email import send_email
+from src.utils.email import send_email
 from typing import Optional
-from database import UserModel
-from notifications.interfaces import EmailSenderInterface
+from src.database import UserModel
+from src.notifications.interfaces import EmailSenderInterface
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 

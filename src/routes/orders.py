@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
-from database import (
+from src.database import (
     get_db,
     CartModel,
     CartItemModel,
@@ -11,12 +11,12 @@ from database import (
     OrderItemModel,
     OrderStatusEnum,
 )
-from schemas.movies import OrderSchema, OrderCreateSchema, OrderItemSchema
-from config.dependencies import get_current_user, get_current_admin
+from src.schemas.movies import OrderSchema, OrderCreateSchema, OrderItemSchema
+from src.config.dependencies import get_current_user, get_current_admin
 import datetime
-from utils.email import send_email
+from src.utils.email import send_email
 from typing import Optional
-from database import UserModel
+from src.database import UserModel
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 

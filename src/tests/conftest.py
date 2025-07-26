@@ -4,23 +4,23 @@ from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
-from config import get_settings
-from config.dependencies import get_s3_storage_client, get_accounts_email_notificator
-from database import (
+from src.config import get_settings
+from src.config.dependencies import get_s3_storage_client, get_accounts_email_notificator
+from src.database import (
     reset_database,
     get_db_contextmanager,
     UserGroupEnum,
     UserGroupModel,
 )
-from database.populate import CSVDatabaseSeeder
-from main import app
-from security.interfaces import JWTAuthManagerInterface
-from security.token_manager import JWTAuthManager
-from storages import S3StorageClient
-from tests.doubles.fakes.storage import FakeS3Storage
-from tests.doubles.stubs.emails import StubEmailSender
-from database.models.base import Base
-from database.session_sqlite import sqlite_engine
+from src.database.populate import CSVDatabaseSeeder
+from src.main import app
+from src.security.interfaces import JWTAuthManagerInterface
+from src.security.token_manager import JWTAuthManager
+from src.storages import S3StorageClient
+from src.tests.doubles.fakes.storage import FakeS3Storage
+from src.tests.doubles.stubs.emails import StubEmailSender
+from src.database.models.base import Base
+from src.database.session_sqlite import sqlite_engine
 
 
 def pytest_configure(config):

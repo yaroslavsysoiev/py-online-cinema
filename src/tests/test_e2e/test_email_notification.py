@@ -8,7 +8,7 @@ from httpx import BasicAuth
 from bs4 import BeautifulSoup
 import os
 
-from database import (
+from src.database import (
     ActivationTokenModel,
     UserModel,
     RefreshTokenModel,

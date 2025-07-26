@@ -8,22 +8,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from pydantic import BaseModel
 
-from config.dependencies import (
+from src.config.dependencies import (
     get_current_user,
     get_current_admin,
     get_accounts_email_notificator,
 )
-from security.passwords import (
+from src.security.passwords import (
     validate_password_strength,
     verify_password,
     hash_password,
 )
 
 
-from config import get_jwt_auth_manager, BaseAppSettings
-from config.settings import get_settings
+from src.config import get_jwt_auth_manager, BaseAppSettings
+from src.config.settings import get_settings
 
-from database import (
+from src.database import (
     get_db,
     UserModel,
     UserGroupModel,
@@ -35,8 +35,8 @@ from database import (
     CartModel,
     PurchasedMovieModel,
 )
-from exceptions import BaseSecurityError
-from schemas import (
+from src.exceptions import BaseSecurityError
+from src.schemas import (
     UserRegistrationRequestSchema,
     UserRegistrationResponseSchema,
     MessageResponseSchema,
@@ -52,11 +52,11 @@ from schemas import (
     NotificationUpdateSchema,
 )
 
-from utils.email import send_email
+from src.utils.email import send_email
 
-from security.interfaces import JWTAuthManagerInterface
-from security.passwords import hash_password
-from notifications.interfaces import EmailSenderInterface
+from src.security.interfaces import JWTAuthManagerInterface
+from src.security.passwords import hash_password
+from src.notifications.interfaces import EmailSenderInterface
 
 router = APIRouter()
 

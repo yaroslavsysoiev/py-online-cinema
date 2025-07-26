@@ -1,16 +1,16 @@
 from fastapi import FastAPI, Depends, Request
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import JSONResponse
-from config.dependencies import get_current_user
+from src.config.dependencies import get_current_user
 
-from routes import accounts_router, movie_router
-from routes.directors import router as directors_router
-from routes.certifications import router as certifications_router
-from routes.genres import router as genres_router
-from routes.actors import router as actors_router
-from routes.orders import router as orders_router
-from routes.payments import router as payments_router
-from routes.profiles import router as profiles_router
+from src.routes import accounts_router, movie_router
+from src.routes.directors import router as directors_router
+from src.routes.certifications import router as certifications_router
+from src.routes.genres import router as genres_router
+from src.routes.actors import router as actors_router
+from src.routes.orders import router as orders_router
+from src.routes.payments import router as payments_router
+from src.routes.profiles import router as profiles_router
 
 app = FastAPI(
     title="Movies homework",

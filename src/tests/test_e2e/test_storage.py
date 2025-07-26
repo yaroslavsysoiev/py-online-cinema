@@ -5,7 +5,7 @@ from io import BytesIO
 from PIL import Image
 from sqlalchemy import select, insert
 
-from database import UserModel, UserProfileModel, UserGroupEnum, UserGroupModel
+from src.database import UserModel, UserProfileModel, UserGroupEnum, UserGroupModel
 
 
 @pytest.mark.e2e

@@ -6,8 +6,8 @@ from io import BytesIO
 from PIL import Image
 from sqlalchemy import select, func
 
-from database import UserModel, UserProfileModel
-from exceptions import S3FileUploadError
+from src.database import UserModel, UserProfileModel
+from src.exceptions import S3FileUploadError
 
 
 @pytest.mark.asyncio
@@ -137,7 +137,7 @@ async def test_create_user_profile_expired_token(client, jwt_manager):
     - The error message should be: "Token has expired."
     """
     expired_time = datetime.now() - timedelta(days=1)
-    with patch("security.token_manager.datetime") as mock_datetime:
+    with patch("src.security.token_manager.datetime") as mock_datetime:
         mock_datetime.now.return_value = expired_time
         expired_token = jwt_manager.create_access_token({"user_id": 1})
 

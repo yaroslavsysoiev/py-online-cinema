@@ -1,2 +1,2 @@
-from config.settings import BaseAppSettings, get_settings
-from config.dependencies import get_jwt_auth_manager
+from src.config.settings import BaseAppSettings, get_settings
+from src.config.dependencies import get_jwt_auth_manager

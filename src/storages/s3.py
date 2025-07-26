@@ -8,8 +8,8 @@ from botocore.exceptions import (
     ConnectionError,
 )
 
-from exceptions import S3ConnectionError, S3FileUploadError
-from storages import S3StorageInterface
+from src.exceptions import S3ConnectionError, S3FileUploadError
+from .interfaces import S3StorageInterface
 
 
 class S3StorageClient(S3StorageInterface):

@@ -2,7 +2,7 @@ from pydantic import BaseModel, EmailStr, field_validator
 from datetime import datetime
 from typing import Optional
 
-from database import accounts_validators
+from src.database import accounts_validators
 
 
 class BaseEmailPasswordSchema(BaseModel):

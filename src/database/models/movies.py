@@ -22,7 +22,7 @@ from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy.dialects.postgresql import UUID
 import uuid as uuid_lib
 
-from database import Base
+from src.database.models.base import Base
 
 
 class MovieStatusEnum(str, Enum):

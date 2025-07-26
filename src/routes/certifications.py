@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from database import get_db
-from database.models.movies import CertificationModel
-from schemas.movies import (
+from src.database import get_db
+from src.database.models.movies import CertificationModel
+from src.schemas.movies import (
     CertificationSchema,
     CertificationCreateSchema,
     CertificationUpdateSchema,

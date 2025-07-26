@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from database import get_db, UserProfileModel, UserModel
-from schemas.profiles import ProfileCreateSchema, ProfileResponseSchema
-from config.dependencies import get_current_user, get_s3_storage_client
-from storages import S3StorageInterface
-from exceptions import S3FileUploadError
+from src.database import get_db, UserProfileModel, UserModel
+from src.schemas.profiles import ProfileCreateSchema, ProfileResponseSchema
+from src.config.dependencies import get_current_user, get_s3_storage_client
+from src.storages import S3StorageInterface
+from src.exceptions import S3FileUploadError
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 

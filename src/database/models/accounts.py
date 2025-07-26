@@ -16,19 +16,12 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
-from database import Base
-from database.validators import accounts as validators
-from security.passwords import hash_password, verify_password
-from security.utils import generate_secure_token
-from database.models.movies import (
-    MovieCommentModel,
-    MovieCommentLikeModel,
-    FavoriteMovieModel,
-    CartModel,
-    PurchasedMovieModel,
-    OrderModel,
-    PaymentModel,
-)
+from src.database.models.base import Base
+from src.database.validators import accounts as validators
+from src.security.passwords import hash_password, verify_password
+from src.security.utils import generate_secure_token
+# Імпорт моделей з movies.py видалений для уникнення циклічних імпортів
+# Використовуємо рядкові посилання в relationship
 
 
 class UserGroupEnum(str, enum.Enum):

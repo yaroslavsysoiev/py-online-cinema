@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from celery import shared_task
 from sqlalchemy import delete
-from database import async_session_maker, ActivationTokenModel, PasswordResetTokenModel
+from src.database import async_session_maker, ActivationTokenModel, PasswordResetTokenModel
 
 
 @shared_task

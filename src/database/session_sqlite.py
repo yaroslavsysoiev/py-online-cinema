@@ -4,9 +4,9 @@ from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
-from config.settings import get_settings
+from src.config.settings import get_settings
 
-from database import Base
+from src.database.models.base import Base
 
 settings = get_settings()
 

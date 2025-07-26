@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from database import get_db
-from database.models.movies import GenreModel, MoviesGenresModel, MovieModel
-from schemas.movies import (
+from src.database import get_db
+from src.database.models.movies import GenreModel, MoviesGenresModel, MovieModel
+from src.schemas.movies import (
     GenreSchema,
 )
 
