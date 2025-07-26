@@ -2,17 +2,17 @@ import os
 
 from fastapi import Depends, HTTPException, status, Request
 
-from config.settings import TestingSettings, Settings, BaseAppSettings, get_settings
-from notifications import EmailSenderInterface, EmailSender
+from src.config.settings import TestingSettings, Settings, BaseAppSettings, get_settings
+from src.notifications import EmailSenderInterface, EmailSender
 
-from security.interfaces import JWTAuthManagerInterface
-from security.token_manager import JWTAuthManager
+from src.security.interfaces import JWTAuthManagerInterface
+from src.security.token_manager import JWTAuthManager
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_db  # Додаємо прямий імпорт
-from database.models.accounts import UserModel, UserGroupEnum
-from storages import S3StorageInterface, S3StorageClient
+from src.database import get_db
+from src.database.models.accounts import UserModel, UserGroupEnum
+from src.storages import S3StorageInterface, S3StorageClient
 
 
 def get_jwt_auth_manager(
@@ -30,8 +30,8 @@ def get_jwt_auth_manager(
 
 async def get_current_user(
     request: Request,
-    db: AsyncSession = Depends(get_db),  # Використовуємо напряму get_db
     jwt_manager=Depends(get_jwt_auth_manager),
+    db=Depends(get_db),
 ) -> UserModel:
     auth_header = request.headers.get("Authorization")
     if not auth_header:
