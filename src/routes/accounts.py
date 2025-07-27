@@ -22,7 +22,8 @@ from database import (
     UserGroupEnum,
     ActivationTokenModel,
     PasswordResetTokenModel,
-    RefreshTokenModel
+    RefreshTokenModel,
+    NotificationModel
 )
 from exceptions import BaseSecurityError
 from schemas import (
@@ -37,6 +38,8 @@ from schemas import (
     TokenRefreshRequestSchema,
     TokenRefreshResponseSchema,
     ResendActivationRequestSchema,
+    NotificationSchema,
+    NotificationUpdateSchema,
 )
 
 from utils.email import send_email
@@ -769,3 +772,61 @@ async def admin_change_user_group(
     user.group_id = group.id
     await db.commit()
     return MessageResponseSchema(message=f"User group changed to {data.group.value}.")
+
+# --- Endpoint-и для сповіщень ---
+@router.get(
+    "/notifications/",
+    response_model=list[NotificationSchema],
+    summary="Get user notifications",
+    description="Get all notifications for the current user."
+)
+async def get_notifications(
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    stmt = select(NotificationModel).where(
+        NotificationModel.user_id == current_user.id
+    ).order_by(NotificationModel.created_at.desc())
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+@router.patch(
+    "/notifications/{notification_id}",
+    response_model=NotificationSchema,
+    summary="Mark notification as read",
+    description="Mark a notification as read or unread."
+)
+async def update_notification(
+    notification_id: int,
+    data: NotificationUpdateSchema,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    notification = await db.get(NotificationModel, notification_id)
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found.")
+    if notification.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You can only update your own notifications.")
+    notification.is_read = data.is_read
+    await db.commit()
+    await db.refresh(notification)
+    return notification
+
+@router.delete(
+    "/notifications/{notification_id}",
+    status_code=204,
+    summary="Delete notification",
+    description="Delete a notification."
+)
+async def delete_notification(
+    notification_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    notification = await db.get(NotificationModel, notification_id)
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found.")
+    if notification.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You can only delete your own notifications.")
+    await db.delete(notification)
+    await db.commit()

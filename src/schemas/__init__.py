@@ -1,3 +1,10 @@
+from schemas.movies import (
+    MovieDetailSchema,
+    MovieListResponseSchema,
+    MovieListItemSchema,
+    MovieCreateSchema,
+    MovieUpdateSchema
+)
 from schemas.accounts import (
     UserRegistrationRequestSchema,
     UserRegistrationResponseSchema,
@@ -10,4 +17,6 @@ from schemas.accounts import (
     TokenRefreshRequestSchema,
     TokenRefreshResponseSchema,
     ResendActivationRequestSchema,
+    NotificationSchema,
+    NotificationUpdateSchema
 )
