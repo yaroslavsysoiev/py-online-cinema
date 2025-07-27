@@ -1,8 +1,8 @@
 #!/bin/sh
 
 # SQLAlchemy migrate
-ALEMBIC_CONFIG="/usr/src/alembic/alembic.ini"
-MIGRATIONS_DIR="/usr/src/fastapi/database/migrations/versions"
+ALEMBIC_CONFIG="/usr/src/alembic.ini"
+MIGRATIONS_DIR="/usr/src/src/database/migrations/versions"
 
 echo "Checking for changes before generating a migration..."
 
@@ -29,7 +29,7 @@ if ! psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\dt" | g
 
     # Run database saver script only if alembic_version table was just created
     echo "Running database saver script..."
-    python -m database.populate
+    python -m src.database.populate
     echo "Database saver script completed."
 
     exit 0
@@ -59,5 +59,5 @@ fi
 
 # Run database saver script
 echo "Running database saver script..."
-python -m database.populate
+python -m src.database.populate
 echo "Database saver script completed."
