@@ -30,8 +30,8 @@ jobs:
 
       - name: Execute Deployment Script on EC2
         run: |
-          # Замініть шлях на актуальний шлях до deploy.sh на сервері
+          # Replace the path with the actual path to deploy.sh on the server
           ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
                 'bash /home/ubuntu/path/to/your/project/commands/deploy.sh'
 
-# Для роботи деплою додайте secrets: EC2_HOST, EC2_USER, EC2_SSH_KEY у GitHub Settings -> Secrets
+# For deployment to work, add secrets: EC2_HOST, EC2_USER, EC2_SSH_KEY in GitHub Settings -> Secrets

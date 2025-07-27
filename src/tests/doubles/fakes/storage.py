@@ -1,6 +1,6 @@
 from typing import Dict, Union
 
-from storages import S3StorageInterface
+from src.storages import S3StorageInterface
 
 
 class FakeS3Storage(S3StorageInterface):
@@ -17,7 +17,9 @@ class FakeS3Storage(S3StorageInterface):
         """
         self.storage: Dict[str, bytes] = {}
 
-    async def upload_file(self, file_name: str, file_data: Union[bytes, bytearray]) -> None:
+    async def upload_file(
+        self, file_name: str, file_data: Union[bytes, bytearray]
+    ) -> None:
         """
         Simulates file upload to S3 by storing the file data in a dictionary.
 

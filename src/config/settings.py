@@ -8,7 +8,9 @@ from pydantic_settings import BaseSettings
 class BaseAppSettings(BaseSettings):
     BASE_DIR: Path = Path(__file__).parent.parent
     PATH_TO_DB: str = str(BASE_DIR / "database" / "source" / "theater.db")
-    PATH_TO_MOVIES_CSV: str = str(BASE_DIR / "database" / "seed_data" / "imdb_movies.csv")
+    PATH_TO_MOVIES_CSV: str = str(
+        BASE_DIR / "database" / "seed_data" / "imdb_movies.csv"
+    )
     LOGIN_TIME_DAYS: int = 7
 
 
@@ -57,18 +59,30 @@ class TestingSettings(BaseAppSettings):
     MAILHOG_API_PORT: int = int(os.getenv("MAILHOG_API_PORT", "8025"))
 
     def model_post_init(self, __context: dict[str, Any] | None = None) -> None:
-        object.__setattr__(self, 'PATH_TO_DB', str(self.BASE_DIR / "database" / "source" / "test.db"))
+        object.__setattr__(
+            self, 'PATH_TO_DB', str(self.BASE_DIR / "database" / "source" / "test.db")
+        )
         object.__setattr__(
             self,
             'PATH_TO_MOVIES_CSV',
-            str(self.BASE_DIR / "database" / "seed_data" / "test_data.csv")
+            str(self.BASE_DIR / "database" / "seed_data" / "test_data.csv"),
         )
         object.__setattr__(
             self,
             'PATH_TO_EMAIL_TEMPLATES_DIR',
-            str(self.BASE_DIR / "notifications" / "templates")
+            str(self.BASE_DIR / "notifications" / "templates"),
         )
-        object.__setattr__(self, 'ACTIVATION_EMAIL_TEMPLATE_NAME', "activation_request.html")
-        object.__setattr__(self, 'ACTIVATION_COMPLETE_EMAIL_TEMPLATE_NAME', "activation_complete.html")
-        object.__setattr__(self, 'PASSWORD_RESET_TEMPLATE_NAME', "password_reset_request.html")
-        object.__setattr__(self, 'PASSWORD_RESET_COMPLETE_TEMPLATE_NAME', "password_reset_complete.html")
+        object.__setattr__(
+            self, 'ACTIVATION_EMAIL_TEMPLATE_NAME', "activation_request.html"
+        )
+        object.__setattr__(
+            self, 'ACTIVATION_COMPLETE_EMAIL_TEMPLATE_NAME', "activation_complete.html"
+        )
+        object.__setattr__(
+            self, 'PASSWORD_RESET_TEMPLATE_NAME', "password_reset_request.html"
+        )
+        object.__setattr__(
+            self,
+            'PASSWORD_RESET_COMPLETE_TEMPLATE_NAME',
+            "password_reset_complete.html",
+        )

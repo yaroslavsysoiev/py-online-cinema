@@ -2,9 +2,16 @@ from logging.config import fileConfig
 
 from alembic import context
 
-from database.models import movies, accounts # noqa: F401
-from database.models.base import Base
-from database.session_postgresql import sync_postgresql_engine
+import os
+from src.database.models import movies, accounts  # noqa: F401
+from src.database.models.base import Base
+
+environment = os.getenv("ENVIRONMENT", "developing")
+
+if environment == "testing":
+    from src.database.session_sqlite import sqlite_engine as sync_engine
+else:
+    from src.database.session_postgresql import sync_postgresql_engine as sync_engine
 
 
 # this is the Alembic Config object, which provides
@@ -40,14 +47,14 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    connectable = sync_postgresql_engine
+    connectable = sync_engine
 
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
-            compare_server_default=True
+            compare_server_default=True,
         )
 
         with context.begin_transaction():
@@ -61,14 +68,14 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = sync_postgresql_engine
+    connectable = sync_engine
 
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
-            compare_server_default=True
+            compare_server_default=True,
         )
 
         with context.begin_transaction():

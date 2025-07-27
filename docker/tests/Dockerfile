@@ -34,3 +34,6 @@ WORKDIR /usr/src/fastapi
 
 # Copy the source code
 COPY ./src .
+
+# Add symlink for src imports
+RUN ln -s /usr/src/fastapi /usr/src/src

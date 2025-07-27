@@ -4,35 +4,29 @@ from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
-from config import get_settings
-from config.dependencies import get_s3_storage_client, get_accounts_email_notificator
-from database import (
+from src.config import get_settings
+from src.config.dependencies import get_s3_storage_client, get_accounts_email_notificator
+from src.database import (
     reset_database,
     get_db_contextmanager,
     UserGroupEnum,
-    UserGroupModel
+    UserGroupModel,
 )
-from database.populate import CSVDatabaseSeeder
-from main import app
-from security.interfaces import JWTAuthManagerInterface
-from security.token_manager import JWTAuthManager
-from storages import S3StorageClient
-from tests.doubles.fakes.storage import FakeS3Storage
-from tests.doubles.stubs.emails import StubEmailSender
-from database.models.base import Base
-from database.session_sqlite import sqlite_engine
+from src.database.populate import CSVDatabaseSeeder
+from src.main import app
+from src.security.interfaces import JWTAuthManagerInterface
+from src.security.token_manager import JWTAuthManager
+from src.storages import S3StorageClient
+from src.tests.doubles.fakes.storage import FakeS3Storage
+from src.tests.doubles.stubs.emails import StubEmailSender
+from src.database.models.base import Base
+from src.database.session_sqlite import sqlite_engine
 
 
 def pytest_configure(config):
-    config.addinivalue_line(
-        "markers", "e2e: End-to-end tests"
-    )
-    config.addinivalue_line(
-        "markers", "order: Specify the order of test execution"
-    )
-    config.addinivalue_line(
-        "markers", "unit: Unit tests"
-    )
+    config.addinivalue_line("markers", "e2e: End-to-end tests")
+    config.addinivalue_line("markers", "order: Specify the order of test execution")
+    config.addinivalue_line("markers", "unit: Unit tests")
 
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
@@ -103,7 +97,7 @@ async def s3_client(settings):
         endpoint_url=settings.S3_STORAGE_ENDPOINT,
         access_key=settings.S3_STORAGE_ACCESS_KEY,
         secret_key=settings.S3_STORAGE_SECRET_KEY,
-        bucket_name=settings.S3_BUCKET_NAME
+        bucket_name=settings.S3_BUCKET_NAME,
     )
 
 
@@ -117,7 +111,9 @@ async def client(email_sender_stub, s3_storage_fake):
     app.dependency_overrides[get_accounts_email_notificator] = lambda: email_sender_stub
     app.dependency_overrides[get_s3_storage_client] = lambda: s3_storage_fake
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as async_client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as async_client:
         yield async_client
 
     app.dependency_overrides.clear()
@@ -132,8 +128,10 @@ async def e2e_client(settings):
     """
     # For e2e tests we DON'T use dependency overrides,
     # so real services (EmailSender, S3StorageClient) are used
-    
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as async_client:
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as async_client:
         yield async_client
 
 
@@ -185,7 +183,7 @@ async def jwt_manager() -> JWTAuthManagerInterface:
     return JWTAuthManager(
         secret_key_access=settings.SECRET_KEY_ACCESS,
         secret_key_refresh=settings.SECRET_KEY_REFRESH,
-        algorithm=settings.JWT_SIGNING_ALGORITHM
+        algorithm=settings.JWT_SIGNING_ALGORITHM,
     )
 
 
@@ -197,7 +195,9 @@ async def seed_user_groups(db_session: AsyncSession):
     This fixture inserts all user groups defined in UserGroupEnum into the database and commits the transaction.
     It then yields the asynchronous database session for further testing.
     """
-    existing_groups = (await db_session.execute(select(UserGroupModel.name))).scalars().all()
+    existing_groups = (
+        (await db_session.execute(select(UserGroupModel.name))).scalars().all()
+    )
     groups = [
         {"name": "USER"},
         {"name": "MODERATOR"},
@@ -225,7 +225,9 @@ async def seed_database(db_session):
     :type db_session: AsyncSession
     """
     settings = get_settings()
-    seeder = CSVDatabaseSeeder(csv_file_path=settings.PATH_TO_MOVIES_CSV, db_session=db_session)
+    seeder = CSVDatabaseSeeder(
+        csv_file_path=settings.PATH_TO_MOVIES_CSV, db_session=db_session
+    )
 
     if not await seeder.is_db_populated():
         await seeder.seed()

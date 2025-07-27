@@ -10,8 +10,8 @@ from tqdm import tqdm
 import uuid
 from datetime import date, datetime
 
-from config import get_settings
-from database import (
+from src.config import get_settings
+from src.database import (
     CountryModel,
     GenreModel,
     ActorModel,
@@ -19,9 +19,11 @@ from database import (
     ActorsMoviesModel,
     LanguageModel,
     MoviesLanguagesModel,
-    MovieModel, UserGroupModel, UserGroupEnum
+    MovieModel,
+    UserGroupModel,
+    UserGroupEnum,
 )
-from database import get_db_contextmanager
+from src.database import get_db_contextmanager
 
 CHUNK_SIZE = 1000
 
@@ -67,12 +69,16 @@ class CSVDatabaseSeeder:
         data['crew'] = (
             data['crew']
             .str.replace(r'\s+', '', regex=True)
-            .apply(lambda x: ','.join(sorted(set(x.split(',')))) if x != 'Unknown' else x)
+            .apply(
+                lambda x: ','.join(sorted(set(x.split(',')))) if x != 'Unknown' else x
+            )
         )
 
         data['genre'] = data['genre'].str.replace('\u00A0', '', regex=True)
         data['date_x'] = data['date_x'].astype(str).str.strip()
-        data['date_x'] = pd.to_datetime(data['date_x'], format='%Y-%m-%d', errors='raise')
+        data['date_x'] = pd.to_datetime(
+            data['date_x'], format='%Y-%m-%d', errors='raise'
+        )
         data['date_x'] = data['date_x'].dt.date
         data['orig_lang'] = data['orig_lang'].str.replace(r'\s+', '', regex=True)
         data['status'] = data['status'].str.strip()
@@ -102,10 +108,7 @@ class CSVDatabaseSeeder:
             print("User groups seeded successfully.")
 
     async def _get_or_create_bulk(
-            self,
-            model,
-            items: List[str],
-            unique_field: str
+        self, model, items: List[str], unique_field: str
     ) -> Dict[str, object]:
         """
         For a given model and a list of item names/keys (e.g., a list of genres),
@@ -122,7 +125,7 @@ class CSVDatabaseSeeder:
 
         if items:
             for i in range(0, len(items), CHUNK_SIZE):
-                chunk = items[i: i + CHUNK_SIZE]
+                chunk = items[i : i + CHUNK_SIZE]
                 result = await self._db_session.execute(
                     select(model).where(getattr(model, unique_field).in_(chunk))
                 )
@@ -136,12 +139,12 @@ class CSVDatabaseSeeder:
 
         if new_records:
             for i in range(0, len(new_records), CHUNK_SIZE):
-                chunk = new_records[i: i + CHUNK_SIZE]
+                chunk = new_records[i : i + CHUNK_SIZE]
                 await self._db_session.execute(insert(model).values(chunk))
                 await self._db_session.flush()
 
             for i in range(0, len(new_items), CHUNK_SIZE):
-                chunk = new_items[i: i + CHUNK_SIZE]
+                chunk = new_items[i : i + CHUNK_SIZE]
                 result_new = await self._db_session.execute(
                     select(model).where(getattr(model, unique_field).in_(chunk))
                 )
@@ -176,9 +179,10 @@ class CSVDatabaseSeeder:
         await self._db_session.flush()
 
     async def _prepare_reference_data(
-            self,
-            data: pd.DataFrame
-    ) -> Tuple[Dict[str, object], Dict[str, object], Dict[str, object], Dict[str, object]]:
+        self, data: pd.DataFrame
+    ) -> Tuple[
+        Dict[str, object], Dict[str, object], Dict[str, object], Dict[str, object]
+    ]:
         """
         Gather unique values for countries, genres, actors, and languages from the DataFrame.
         Then call _get_or_create_bulk for each to ensure they exist in the database.
@@ -190,31 +194,34 @@ class CSVDatabaseSeeder:
         countries = list(data['country'].unique())
         genres = {
             genre.strip()
-            for genres_ in data['genre'].dropna() for genre in genres_.split(',')
+            for genres_ in data['genre'].dropna()
+            for genre in genres_.split(',')
             if genre.strip()
         }
         actors = {
             actor.strip()
-            for crew in data['crew'].dropna() for actor in crew.split(',')
+            for crew in data['crew'].dropna()
+            for actor in crew.split(',')
             if actor.strip()
         }
         languages = {
             lang.strip()
-            for langs in data['orig_lang'].dropna() for lang in langs.split(',')
+            for langs in data['orig_lang'].dropna()
+            for lang in langs.split(',')
             if lang.strip()
         }
 
         country_map = await self._get_or_create_bulk(CountryModel, countries, 'code')
         genre_map = await self._get_or_create_bulk(GenreModel, list(genres), 'name')
         actor_map = await self._get_or_create_bulk(ActorModel, list(actors), 'name')
-        language_map = await self._get_or_create_bulk(LanguageModel, list(languages), 'name')
+        language_map = await self._get_or_create_bulk(
+            LanguageModel, list(languages), 'name'
+        )
 
         return country_map, genre_map, actor_map, language_map
 
     def _prepare_movies_data(
-            self,
-            data: pd.DataFrame,
-            country_map: Dict[str, object]
+        self, data: pd.DataFrame, country_map: Dict[str, object]
     ) -> List[Dict[str, object]]:
         """
         Build a list of dictionaries representing movie records to be inserted into MovieModel.
@@ -224,50 +231,133 @@ class CSVDatabaseSeeder:
         :return: A list of dictionaries, each representing a new movie record.
         """
         movies_data: List[Dict[str, object]] = []
-        for _, row in tqdm(data.iterrows(), total=data.shape[0], desc="Processing movies"):
+        for _, row in tqdm(
+            data.iterrows(), total=data.shape[0], desc="Processing movies"
+        ):
             country = country_map[row['country']]
             movie = {
                 "name": row['names'] if 'names' in row and row['names'] else "",
-                "year": row['date_x'].year if 'date_x' in row and not pd.isnull(row['date_x']) else 2000,
+                "year": (
+                    row['date_x'].year
+                    if 'date_x' in row and not pd.isnull(row['date_x'])
+                    else 2000
+                ),
                 "time": 120,
-                "imdb": float(row['score']) if 'score' in row and not pd.isnull(row['score']) else 0.0,
-                "date": row['date_x'] if 'date_x' in row and not pd.isnull(row['date_x']) else date.today(),
-                "score": float(row['score']) if 'score' in row and not pd.isnull(row['score']) else 0.0,
-                "overview": row['overview'] if 'overview' in row and row['overview'] else "",
+                "imdb": (
+                    float(row['score'])
+                    if 'score' in row and not pd.isnull(row['score'])
+                    else 0.0
+                ),
+                "date": (
+                    row['date_x']
+                    if 'date_x' in row and not pd.isnull(row['date_x'])
+                    else date.today()
+                ),
+                "score": (
+                    float(row['score'])
+                    if 'score' in row and not pd.isnull(row['score'])
+                    else 0.0
+                ),
+                "overview": (
+                    row['overview'] if 'overview' in row and row['overview'] else ""
+                ),
                 "status": row['status'] if 'status' in row and row['status'] else "",
-                "budget": float(row['budget_x']) if 'budget_x' in row and not pd.isnull(row['budget_x']) else 0.0,
-                "revenue": float(row['revenue']) if 'revenue' in row and not pd.isnull(row['revenue']) else 0.0,
+                "budget": (
+                    float(row['budget_x'])
+                    if 'budget_x' in row and not pd.isnull(row['budget_x'])
+                    else 0.0
+                ),
+                "revenue": (
+                    float(row['revenue'])
+                    if 'revenue' in row and not pd.isnull(row['revenue'])
+                    else 0.0
+                ),
                 "country_id": country.id if hasattr(country, 'id') else 1,
-                "votes": int(row['votes']) if 'votes' in row and not pd.isnull(row['votes']) else 0,
-                "description": row['overview'] if 'overview' in row and row['overview'] else "",
-                "price": float(row['price']) if 'price' in row and not pd.isnull(row['price']) else 0.0,
+                "votes": (
+                    int(row['votes'])
+                    if 'votes' in row and not pd.isnull(row['votes'])
+                    else 0
+                ),
+                "description": (
+                    row['overview'] if 'overview' in row and row['overview'] else ""
+                ),
+                "price": (
+                    float(row['price'])
+                    if 'price' in row and not pd.isnull(row['price'])
+                    else 0.0
+                ),
                 "poster": row['poster'] if 'poster' in row and row['poster'] else "",
-                "age_rating": row['age_rating'] if 'age_rating' in row and row['age_rating'] else "",
-                "language": row['language'] if 'language' in row and row['language'] else "",
-                "director_id": int(row['director_id']) if 'director_id' in row and not pd.isnull(row['director_id']) else 1,
-                "genre_id": int(row['genre_id']) if 'genre_id' in row and not pd.isnull(row['genre_id']) else 1,
-                "is_active": bool(row['is_active']) if 'is_active' in row and not pd.isnull(row['is_active']) else True,
-                "trailer_url": row['trailer_url'] if 'trailer_url' in row and row['trailer_url'] else "",
+                "age_rating": (
+                    row['age_rating']
+                    if 'age_rating' in row and row['age_rating']
+                    else ""
+                ),
+                "language": (
+                    row['language'] if 'language' in row and row['language'] else ""
+                ),
+                "director_id": (
+                    int(row['director_id'])
+                    if 'director_id' in row and not pd.isnull(row['director_id'])
+                    else 1
+                ),
+                "genre_id": (
+                    int(row['genre_id'])
+                    if 'genre_id' in row and not pd.isnull(row['genre_id'])
+                    else 1
+                ),
+                "is_active": (
+                    bool(row['is_active'])
+                    if 'is_active' in row and not pd.isnull(row['is_active'])
+                    else True
+                ),
+                "trailer_url": (
+                    row['trailer_url']
+                    if 'trailer_url' in row and row['trailer_url']
+                    else ""
+                ),
                 "slug": row['slug'] if 'slug' in row and row['slug'] else "",
-                "original_title": row['original_title'] if 'original_title' in row and row['original_title'] else "",
-                "production_company": row['production_company'] if 'production_company' in row and row['production_company'] else "",
-                "release_country": row['release_country'] if 'release_country' in row and row['release_country'] else "",
-                "is_published": bool(row['is_published']) if 'is_published' in row and not pd.isnull(row['is_published']) else True,
+                "original_title": (
+                    row['original_title']
+                    if 'original_title' in row and row['original_title']
+                    else ""
+                ),
+                "production_company": (
+                    row['production_company']
+                    if 'production_company' in row and row['production_company']
+                    else ""
+                ),
+                "release_country": (
+                    row['release_country']
+                    if 'release_country' in row and row['release_country']
+                    else ""
+                ),
+                "is_published": (
+                    bool(row['is_published'])
+                    if 'is_published' in row and not pd.isnull(row['is_published'])
+                    else True
+                ),
                 "created_at": datetime.now(),
                 "updated_at": datetime.now(),
-                "uuid": row['uuid'] if 'uuid' in row and row['uuid'] else str(uuid.uuid4()),
-                "certification_id": int(row['certification_id']) if 'certification_id' in row and not pd.isnull(row['certification_id']) else 1,
+                "uuid": (
+                    row['uuid'] if 'uuid' in row and row['uuid'] else str(uuid.uuid4())
+                ),
+                "certification_id": (
+                    int(row['certification_id'])
+                    if 'certification_id' in row
+                    and not pd.isnull(row['certification_id'])
+                    else 1
+                ),
             }
             movies_data.append(movie)
         return movies_data
 
     def _prepare_associations(
-            self,
-            data: pd.DataFrame,
-            movie_ids: List[int],
-            genre_map: Dict[str, object],
-            actor_map: Dict[str, object],
-            language_map: Dict[str, object]
+        self,
+        data: pd.DataFrame,
+        movie_ids: List[int],
+        genre_map: Dict[str, object],
+        actor_map: Dict[str, object],
+        language_map: Dict[str, object],
     ) -> Tuple[List[Dict[str, int]], List[Dict[str, int]], List[Dict[str, int]]]:
         """
         Prepare three lists of dictionaries: movie-genre, movie-actor, and movie-language
@@ -282,11 +372,17 @@ class CSVDatabaseSeeder:
         default_actor = next(iter(actor_map.values())) if actor_map else None
         default_language = next(iter(language_map.values())) if language_map else None
 
-        for i, (_, row) in enumerate(tqdm(data.iterrows(), total=data.shape[0], desc="Processing associations")):
+        for i, (_, row) in enumerate(
+            tqdm(data.iterrows(), total=data.shape[0], desc="Processing associations")
+        ):
             movie_id = movie_ids[i]
 
             # Genres
-            genres = [g.strip() for g in row['genre'].split(',') if g.strip() and g.strip() in genre_map]
+            genres = [
+                g.strip()
+                for g in row['genre'].split(',')
+                if g.strip() and g.strip() in genre_map
+            ]
             if not genres and default_genre:
                 genres = [getattr(default_genre, 'name', 'Drama')]
             for genre_name in genres:
@@ -294,7 +390,11 @@ class CSVDatabaseSeeder:
                 movie_genres_data.append({"movie_id": movie_id, "genre_id": genre.id})
 
             # Actors
-            actors = [a.strip() for a in row['crew'].split(',') if a.strip() and a.strip() in actor_map]
+            actors = [
+                a.strip()
+                for a in row['crew'].split(',')
+                if a.strip() and a.strip() in actor_map
+            ]
             if not actors and default_actor:
                 actors = [getattr(default_actor, 'name', 'Unknown Actor')]
             for actor_name in actors:
@@ -302,12 +402,18 @@ class CSVDatabaseSeeder:
                 movie_actors_data.append({"movie_id": movie_id, "actor_id": actor.id})
 
             # Languages
-            langs = [l.strip() for l in row['orig_lang'].split(',') if l.strip() and l.strip() in language_map]
+            langs = [
+                l.strip()
+                for l in row['orig_lang'].split(',')
+                if l.strip() and l.strip() in language_map
+            ]
             if not langs and default_language:
                 langs = [getattr(default_language, 'name', 'English')]
             for lang_name in langs:
                 language = language_map[lang_name]
-                movie_languages_data.append({"movie_id": movie_id, "language_id": language.id})
+                movie_languages_data.append(
+                    {"movie_id": movie_id, "language_id": language.id}
+                )
 
         return movie_genres_data, movie_actors_data, movie_languages_data
 
@@ -324,9 +430,12 @@ class CSVDatabaseSeeder:
 
             await self._seed_user_groups()
 
-            # Додаємо сертифікат, якщо його немає
-            from database.models.movies import CertificationModel
-            cert_count = await self._db_session.execute(select(func.count(CertificationModel.id)))
+            # Add certification if it doesn't exist
+            from src.database.models.movies import CertificationModel
+
+            cert_count = await self._db_session.execute(
+                select(func.count(CertificationModel.id))
+            )
             if cert_count.scalar() == 0:
                 cert = CertificationModel(name="PG-13")
                 self._db_session.add(cert)
@@ -334,18 +443,21 @@ class CSVDatabaseSeeder:
 
             data = self._preprocess_csv()
 
-            country_map, genre_map, actor_map, language_map = await self._prepare_reference_data(data)
+            country_map, genre_map, actor_map, language_map = (
+                await self._prepare_reference_data(data)
+            )
 
             movies_data = self._prepare_movies_data(data, country_map)
 
             result = await self._db_session.execute(
-                insert(MovieModel).returning(MovieModel.id),
-                movies_data
+                insert(MovieModel).returning(MovieModel.id), movies_data
             )
             movie_ids = list(result.scalars().all())
 
-            movie_genres_data, movie_actors_data, movie_languages_data = self._prepare_associations(
-                data, movie_ids, genre_map, actor_map, language_map
+            movie_genres_data, movie_actors_data, movie_languages_data = (
+                self._prepare_associations(
+                    data, movie_ids, genre_map, actor_map, language_map
+                )
             )
 
             await self._bulk_insert(MoviesGenresModel, movie_genres_data)

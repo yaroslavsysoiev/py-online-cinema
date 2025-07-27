@@ -1,4 +1,4 @@
-from notifications import EmailSenderInterface
+from src.notifications import EmailSenderInterface
 
 
 class StubEmailSender(EmailSenderInterface):
@@ -33,7 +33,9 @@ class StubEmailSender(EmailSenderInterface):
         """
         return None
 
-    async def send_password_reset_complete_email(self, email: str, login_link: str) -> None:
+    async def send_password_reset_complete_email(
+        self, email: str, login_link: str
+    ) -> None:
         """
         Stub implementation for sending a password reset complete email.
 

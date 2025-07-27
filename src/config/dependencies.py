@@ -2,45 +2,47 @@ import os
 
 from fastapi import Depends, HTTPException, status, Request
 
-from config.settings import TestingSettings, Settings, BaseAppSettings, get_settings
-from notifications import EmailSenderInterface, EmailSender
+from src.config.settings import TestingSettings, Settings, BaseAppSettings, get_settings
+from src.notifications import EmailSenderInterface, EmailSender
 
-from security.interfaces import JWTAuthManagerInterface
-from security.token_manager import JWTAuthManager
+from src.security.interfaces import JWTAuthManagerInterface
+from src.security.token_manager import JWTAuthManager
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_db  # Додаємо прямий імпорт
-from database.models.accounts import UserModel, UserGroupEnum
-from storages import S3StorageInterface, S3StorageClient
+from src.database import get_db
+from src.database.models.accounts import UserModel, UserGroupEnum
+from src.storages import S3StorageInterface, S3StorageClient
 
 
-def get_jwt_auth_manager(settings: BaseAppSettings = Depends(get_settings)) -> JWTAuthManagerInterface:
+def get_jwt_auth_manager(
+    settings: BaseAppSettings = Depends(get_settings),
+) -> JWTAuthManagerInterface:
     """
     Create and return a JWT authentication manager instance.
     """
     return JWTAuthManager(
         secret_key_access=settings.SECRET_KEY_ACCESS,
         secret_key_refresh=settings.SECRET_KEY_REFRESH,
-        algorithm=settings.JWT_SIGNING_ALGORITHM
+        algorithm=settings.JWT_SIGNING_ALGORITHM,
     )
 
 
 async def get_current_user(
-        request: Request,
-        db: AsyncSession = Depends(get_db),  # Використовуємо напряму get_db
-        jwt_manager=Depends(get_jwt_auth_manager)
+    request: Request,
+    jwt_manager=Depends(get_jwt_auth_manager),
+    db=Depends(get_db),
 ) -> UserModel:
     auth_header = request.headers.get("Authorization")
     if not auth_header:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authorization header is missing"
+            detail="Authorization header is missing",
         )
     if not auth_header.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Authorization header format. Expected 'Bearer <token>'"
+            detail="Invalid Authorization header format. Expected 'Bearer <token>'",
         )
     token = auth_header.split(" ")[1]
     try:
@@ -49,24 +51,21 @@ async def get_current_user(
     except Exception as e:
         if "expired" in str(e).lower():
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token has expired."
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired."
             )
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
         )
     user = await db.get(UserModel, user_id)
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
         )
     return user
 
 
 def get_accounts_email_notificator(
-        settings: BaseAppSettings = Depends(get_settings)
+    settings: BaseAppSettings = Depends(get_settings),
 ) -> EmailSenderInterface:
     """
     Retrieve an instance of the EmailSenderInterface configured with the application settings.
@@ -92,37 +91,36 @@ def get_accounts_email_notificator(
         activation_email_template_name=settings.ACTIVATION_EMAIL_TEMPLATE_NAME,
         activation_complete_email_template_name=settings.ACTIVATION_COMPLETE_EMAIL_TEMPLATE_NAME,
         password_email_template_name=settings.PASSWORD_RESET_TEMPLATE_NAME,
-        password_complete_email_template_name=settings.PASSWORD_RESET_COMPLETE_TEMPLATE_NAME
+        password_complete_email_template_name=settings.PASSWORD_RESET_COMPLETE_TEMPLATE_NAME,
     )
 
 
 async def get_current_admin(
-        current_user: UserModel = Depends(get_current_user)
+    current_user: UserModel = Depends(get_current_user),
 ) -> UserModel:
     if not current_user.has_group(UserGroupEnum.ADMIN):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin privileges required"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required"
         )
     return current_user
 
 
 async def get_current_moderator(
-        current_user: UserModel = Depends(get_current_user)
+    current_user: UserModel = Depends(get_current_user),
 ) -> UserModel:
     if not (
-            current_user.has_group(UserGroupEnum.ADMIN)
-            or current_user.has_group(UserGroupEnum.MODERATOR)
+        current_user.has_group(UserGroupEnum.ADMIN)
+        or current_user.has_group(UserGroupEnum.MODERATOR)
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Moderator privileges required"
+            detail="Moderator privileges required",
         )
     return current_user
 
 
 def get_s3_storage_client(
-        settings: BaseAppSettings = Depends(get_settings)
+    settings: BaseAppSettings = Depends(get_settings),
 ) -> S3StorageInterface:
     """
     Retrieve an instance of the S3StorageInterface configured with the application settings.
@@ -142,5 +140,5 @@ def get_s3_storage_client(
         endpoint_url=settings.S3_STORAGE_ENDPOINT,
         access_key=settings.S3_STORAGE_ACCESS_KEY,
         secret_key=settings.S3_STORAGE_SECRET_KEY,
-        bucket_name=settings.S3_BUCKET_NAME
+        bucket_name=settings.S3_BUCKET_NAME,
     )

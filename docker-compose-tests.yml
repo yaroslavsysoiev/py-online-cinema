@@ -12,7 +12,7 @@ services:
           memory: 512M
           cpus: '0.5'
     environment:
-      - PYTHONPATH=/usr/src/fastapi
+      - PYTHONPATH=/usr/src
       - ENVIRONMENT=testing
       - EMAIL_HOST=mailhog_theater_test
       - EMAIL_PORT=1025
