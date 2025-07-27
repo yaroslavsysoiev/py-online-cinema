@@ -9,25 +9,13 @@ from security.token_manager import JWTAuthManager
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_db
+# from database import get_db  # Moved to inside function
 from database.models.accounts import UserModel, UserGroupEnum
 
 
 def get_jwt_auth_manager(settings: BaseAppSettings = Depends(get_settings)) -> JWTAuthManagerInterface:
     """
     Create and return a JWT authentication manager instance.
-
-    This function uses the provided application settings to instantiate a JWTAuthManager, which implements
-    the JWTAuthManagerInterface. The manager is configured with secret keys for access and refresh tokens
-    as well as the JWT signing algorithm specified in the settings.
-
-    Args:
-        settings (BaseAppSettings, optional): The application settings instance.
-        Defaults to the output of get_settings().
-
-    Returns:
-        JWTAuthManagerInterface: An instance of JWTAuthManager configured with
-        the appropriate secret keys and algorithm.
     """
     return JWTAuthManager(
         secret_key_access=settings.SECRET_KEY_ACCESS,
@@ -38,7 +26,7 @@ def get_jwt_auth_manager(settings: BaseAppSettings = Depends(get_settings)) -> J
 
 async def get_current_user(
         request: Request,
-        db: AsyncSession = Depends(get_db),
+        db: AsyncSession = Depends(lambda: __import__('database').database.get_db()),
         jwt_manager=Depends(get_jwt_auth_manager)
 ) -> UserModel:
     auth_header = request.headers.get("Authorization")

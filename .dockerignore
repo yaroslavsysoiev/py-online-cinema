@@ -87,3 +87,6 @@ venv/
 
 # VS Code
 .vscode/
+
+# Do NOT ignore Alembic migrations directory!
+# (src/database/migrations is required for DB migrations)
