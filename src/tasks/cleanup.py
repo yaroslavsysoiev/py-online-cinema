@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
 from celery import shared_task
 from sqlalchemy import delete
-from database import async_session_maker, ActivationTokenModel, PasswordResetTokenModel
+from src.database import async_session_maker, ActivationTokenModel, PasswordResetTokenModel
 
 
 @shared_task
 def cleanup_expired_tokens():
     import asyncio
+
     asyncio.run(_cleanup_expired_tokens())
 
 
@@ -17,6 +18,8 @@ async def _cleanup_expired_tokens():
             delete(ActivationTokenModel).where(ActivationTokenModel.expires_at < now)
         )
         await session.execute(
-            delete(PasswordResetTokenModel).where(PasswordResetTokenModel.expires_at < now)
+            delete(PasswordResetTokenModel).where(
+                PasswordResetTokenModel.expires_at < now
+            )
         )
         await session.commit()

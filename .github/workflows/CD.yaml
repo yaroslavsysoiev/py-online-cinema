@@ -1,0 +1,37 @@
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  deploy:
+    needs: [test-accounts, test-movies, test-profiles, test-e2e]
+    if: github.event.pull_request.merged == true || github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up SSH Agent
+        uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Add EC2 Host to known_hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Execute Deployment Script on EC2
+        run: |
+          # Replace the path with the actual path to deploy.sh on the server
+          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
+                'bash /home/ubuntu/path/to/your/project/commands/deploy.sh'
+
+# For deployment to work, add secrets: EC2_HOST, EC2_USER, EC2_SSH_KEY in GitHub Settings -> Secrets
