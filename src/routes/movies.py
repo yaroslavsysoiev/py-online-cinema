@@ -3,6 +3,7 @@ from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, aliased
+from datetime import datetime, date
 
 from database import get_db, MovieModel
 from database import (
@@ -321,8 +322,10 @@ async def get_movie_by_id(
             status_code=404,
             detail="Movie with the given ID was not found."
         )
-
-    return MovieDetailSchema.model_validate(movie)
+    response = MovieDetailSchema.model_validate(movie, from_attributes=True).model_dump()
+    if isinstance(movie.date, (datetime, date)):
+        response['date'] = movie.date.isoformat()
+    return response
 
 
 @router.delete(

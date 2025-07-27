@@ -7,6 +7,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
       - postgres_theater_data:/var/lib/postgresql/data/
     networks:
       - theater_network
@@ -118,30 +119,6 @@ services:
         condition: service_healthy
     env_file:
       - .env
-    networks:
-      - theater_network
-
-  redis:
-    image: redis:7-alpine
-    container_name: redis_theater
-    ports:
-      - "6379:6379"
-    networks:
-      - theater_network
-
-  celery_worker:
-    build: .
-    container_name: celery_worker_theater
-    command: ["celery", "-A", "celery_app.celery_app", "worker", "--loglevel=info"]
-    env_file:
-      - .env
-    environment:
-      - PYTHONPATH=/usr/src/fastapi
-    depends_on:
-      - db
-      - redis
-    volumes:
-      - ./src:/usr/src/fastapi
     networks:
       - theater_network
 

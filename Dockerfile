@@ -7,13 +7,7 @@ ENV PIP_NO_CACHE_DIR=off
 ENV ALEMBIC_CONFIG=/usr/src/alembic/alembic.ini
 
 # Installing dependencies
-RUN apt update && apt install -y \
-    gcc \
-    libpq-dev \
-    netcat-openbsd \
-    postgresql-client \
-    dos2unix \
-    && apt clean
+RUN apt-get update && apt-get install -y libpq-dev gcc dos2unix && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
 RUN python -m pip install --upgrade pip && \

@@ -11,7 +11,11 @@ from database import Base
 settings = get_settings()
 
 SQLITE_DATABASE_URL = f"sqlite+aiosqlite:///{settings.PATH_TO_DB}"
-sqlite_engine = create_async_engine(SQLITE_DATABASE_URL, echo=False)
+sqlite_engine = create_async_engine(
+    SQLITE_DATABASE_URL, 
+    echo=False,
+    connect_args={"check_same_thread": False}
+)
 AsyncSQLiteSessionLocal = sessionmaker(  # type: ignore
     bind=sqlite_engine,
     class_=AsyncSession,

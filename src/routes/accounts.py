@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from pydantic import BaseModel
 
-from config.dependencies import get_current_user, get_current_admin
+from config.dependencies import get_current_user, get_current_admin, get_accounts_email_notificator
 from security.passwords import validate_password_strength, verify_password, hash_password
 
 
@@ -48,6 +48,7 @@ from utils.email import send_email
 
 from security.interfaces import JWTAuthManagerInterface
 from security.passwords import hash_password
+from notifications.interfaces import EmailSenderInterface
 
 router = APIRouter()
 
@@ -84,6 +85,7 @@ router = APIRouter()
 async def register_user(
         user_data: UserRegistrationRequestSchema,
         db: AsyncSession = Depends(get_db),
+        email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ) -> UserRegistrationResponseSchema:
     stmt = select(UserModel).where(UserModel.email == user_data.email)
     result = await db.execute(stmt)
@@ -116,10 +118,9 @@ async def register_user(
         db.add(activation_token)
 
         activation_link = f"https://your-domain.com/activate?email={new_user.email}&token={activation_token.token}"
-        await send_email(
-            subject="Activate your account",
-            recipient=new_user.email,
-            body=f"Please activate your account using this link: {activation_link}\nThe link is valid for 24 hours."
+        await email_sender.send_activation_email(
+            email=new_user.email,
+            activation_link=activation_link
         )
 
         await db.commit()
@@ -147,6 +148,7 @@ async def register_user(
 async def request_password_reset_token(
         data: PasswordResetRequestSchema,
         db: AsyncSession = Depends(get_db),
+        email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ) -> MessageResponseSchema:
     stmt = select(UserModel).filter_by(email=data.email)
     result = await db.execute(stmt)
@@ -164,10 +166,9 @@ async def request_password_reset_token(
     await db.commit()
 
     reset_link = f"https://your-domain.com/reset-password?email={user.email}&token={reset_token.token}"
-    await send_email(
-        subject="Password reset request",
-        recipient=user.email,
-        body=f"To reset your password, use this link: {reset_link}\nThe link is valid for 24 hours."
+    await email_sender.send_password_reset_email(
+        email=user.email,
+        reset_link=reset_link
     )
 
     return MessageResponseSchema(
@@ -209,6 +210,7 @@ async def request_password_reset_token(
 async def activate_account(
         activation_data: UserActivationRequestSchema,
         db: AsyncSession = Depends(get_db),
+        email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ) -> MessageResponseSchema:
     """
     Endpoint to activate a user's account.
@@ -263,6 +265,15 @@ async def activate_account(
     await db.delete(token_record)
     await db.commit()
 
+    try:
+        login_link = f"https://your-domain.com/login"
+        await email_sender.send_activation_complete_email(
+            email=user.email,
+            login_link=login_link
+        )
+    except Exception as e:
+        print(f"Error sending activation complete email: {e}")
+
     return MessageResponseSchema(message="User account activated successfully.")
 
 
@@ -276,6 +287,7 @@ async def activate_account(
 async def resend_activation_token(
         data: ResendActivationRequestSchema,
         db: AsyncSession = Depends(get_db),
+        email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ) -> MessageResponseSchema:
     stmt = select(UserModel).where(UserModel.email == data.email)
     result = await db.execute(stmt)
@@ -286,19 +298,16 @@ async def resend_activation_token(
     if user.is_active:
         return MessageResponseSchema(message="Account is already activated.")
 
-    # Удаляем старый токен, если есть
     await db.execute(delete(ActivationTokenModel).where(ActivationTokenModel.user_id == user.id))
 
-    # Создаём новый токен
     activation_token = ActivationTokenModel(user_id=user.id)
     db.add(activation_token)
     await db.commit()
 
     activation_link = f"https://your-domain.com/activate?email={user.email}&token={activation_token.token}"
-    await send_email(
-        subject="Activate your account",
-        recipient=user.email,
-        body=f"Please activate your account using this link: {activation_link}\nThe link is valid for 24 hours."
+    await email_sender.send_activation_email(
+        email=user.email,
+        activation_link=activation_link
     )
 
     return MessageResponseSchema(message="If you are registered, you will receive an email with instructions.")
@@ -350,6 +359,7 @@ async def resend_activation_token(
 async def reset_password(
         data: PasswordResetCompleteRequestSchema,
         db: AsyncSession = Depends(get_db),
+        email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ) -> MessageResponseSchema:
     """
     Endpoint for resetting a user's password.
@@ -402,10 +412,18 @@ async def reset_password(
         )
 
     try:
-        hashed = hash_password(data.password)
-        user._hashed_password = hashed
+        user.password = data.password
         await db.run_sync(lambda s: s.delete(token_record))
         await db.commit()
+        
+        try:
+            login_link = f"https://your-domain.com/login"
+            await email_sender.send_password_reset_complete_email(
+                email=user.email,
+                login_link=login_link
+            )
+        except Exception as e:
+            print(f"Error sending password reset complete email: {e}")
     except SQLAlchemyError:
         await db.rollback()
         raise HTTPException(
