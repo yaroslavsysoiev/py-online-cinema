@@ -23,7 +23,9 @@ from database import (
     ActivationTokenModel,
     PasswordResetTokenModel,
     RefreshTokenModel,
-    NotificationModel
+    NotificationModel,
+    CartModel,
+    PurchasedMovieModel
 )
 from exceptions import BaseSecurityError
 from schemas import (
@@ -830,3 +832,120 @@ async def delete_notification(
         raise HTTPException(status_code=403, detail="You can only delete your own notifications.")
     await db.delete(notification)
     await db.commit()
+
+# --- Admin endpoints for cart management ---
+@router.get(
+    "/admin/users/{user_id}/cart",
+    response_model=dict,
+    summary="Admin: Get user's cart",
+    description="Get the contents of a specific user's shopping cart (admin only)",
+    responses={
+        200: {
+            "description": "User's cart contents.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "user_id": 1,
+                        "cart_items": [
+                            {"movie_id": 1, "movie_title": "Inception", "price": 9.99}
+                        ],
+                        "total_price": 9.99
+                    }
+                }
+            },
+        },
+        404: {
+            "description": "User or cart not found.",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "User not found"}
+                }
+            },
+        },
+    },
+)
+async def admin_get_user_cart(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: UserModel = Depends(get_current_admin),
+):
+    user = await db.get(UserModel, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    
+    cart_stmt = select(CartModel).where(CartModel.user_id == user_id)
+    cart_result = await db.execute(cart_stmt)
+    cart = cart_result.scalars().first()
+    
+    if not cart:
+        return {
+            "user_id": user_id,
+            "cart_items": [],
+            "total_price": 0.0
+        }
+    
+    cart_items = []
+    total_price = 0.0
+    
+    for item in cart.items:
+        cart_items.append({
+            "movie_id": item.movie_id,
+            "movie_title": item.movie.name,
+            "price": float(item.movie.price)
+        })
+        total_price += float(item.movie.price)
+    
+    return {
+        "user_id": user_id,
+        "cart_items": cart_items,
+        "total_price": total_price
+    }
+
+@router.get(
+    "/admin/users/{user_id}/purchased",
+    response_model=list[dict],
+    summary="Admin: Get user's purchased movies",
+    description="Get all movies purchased by a specific user (admin only)",
+    responses={
+        200: {
+            "description": "User's purchased movies.",
+            "content": {
+                "application/json": {
+                    "example": [
+                        {"movie_id": 1, "movie_title": "Inception", "purchased_at": "2024-01-01T12:00:00Z", "price_paid": 9.99}
+                    ]
+                }
+            },
+        },
+        404: {
+            "description": "User not found.",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "User not found"}
+                }
+            },
+        },
+    },
+)
+async def admin_get_user_purchased_movies(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: UserModel = Depends(get_current_admin),
+):
+    user = await db.get(UserModel, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    
+    stmt = select(PurchasedMovieModel).where(PurchasedMovieModel.user_id == user_id)
+    result = await db.execute(stmt)
+    purchased_movies = result.scalars().all()
+    
+    return [
+        {
+            "movie_id": pm.movie_id,
+            "movie_title": pm.movie.name,
+            "purchased_at": pm.purchased_at,
+            "price_paid": float(pm.price_paid)
+        }
+        for pm in purchased_movies
+    ]

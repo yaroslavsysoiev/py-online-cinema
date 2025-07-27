@@ -18,7 +18,10 @@ from database.models.movies import (
     CountryModel,
     MoviesGenresModel,
     ActorsMoviesModel,
-    MoviesLanguagesModel
+    MoviesLanguagesModel,
+    CartModel,
+    CartItemModel,
+    PurchasedMovieModel
 )
 
 from database.session_sqlite import reset_sqlite_database as reset_database

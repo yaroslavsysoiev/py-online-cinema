@@ -295,3 +295,37 @@ class CertificationCreateSchema(BaseModel):
 
 class CertificationUpdateSchema(BaseModel):
     name: str
+
+class CartItemSchema(BaseModel):
+    id: int
+    movie_id: int
+    added_at: datetime
+    movie: MovieListItemSchema
+
+    model_config = {
+        "from_attributes": True
+    }
+
+class CartSchema(BaseModel):
+    id: int
+    user_id: int
+    items: list[CartItemSchema]
+    total_price: float
+
+    model_config = {
+        "from_attributes": True
+    }
+
+class PurchasedMovieSchema(BaseModel):
+    id: int
+    movie_id: int
+    purchased_at: datetime
+    price_paid: float
+    movie: MovieListItemSchema
+
+    model_config = {
+        "from_attributes": True
+    }
+
+class CartItemCreateSchema(BaseModel):
+    movie_id: int
