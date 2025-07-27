@@ -1,0 +1,159 @@
+services:
+  db:
+    image: 'postgres:latest'
+    container_name: postgres_theater
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_theater_data:/var/lib/postgresql/data/
+    networks:
+      - theater_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB -h 127.0.0.1 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin_theater
+    ports:
+      - "3333:80"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - pgadmin_theater_data:/var/lib/pgadmin
+    networks:
+      - theater_network
+
+  web:
+    restart: always
+    build: .
+    container_name: backend_theater
+    command: [ "/bin/bash", "/commands/run_web_server_dev.sh" ]
+    env_file:
+      - .env
+    environment:
+      - LOG_LEVEL=debug
+      - PYTHONPATH=/usr/src/fastapi
+      - WATCHFILES_FORCE_POLLING=true
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./src:/usr/src/fastapi
+    networks:
+      - theater_network
+
+  migrator:
+    build: .
+    container_name: alembic_migrator_theater
+    command: ["/bin/bash", "/commands/run_migration.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./src:/usr/src/fastapi
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/usr/src/fastapi
+    networks:
+      - theater_network
+
+  mailhog:
+    restart: always
+    build:
+      context: .
+      dockerfile: ./docker/mailhog/Dockerfile
+    container_name: mailhog_theater
+    command: ["/bin/bash", "-c", "/commands/setup_mailhog_auth.sh && ~/go/bin/MailHog"]
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    env_file:
+      - .env
+    environment:
+      MH_AUTH_FILE: /mailhog.auth
+    networks:
+      - theater_network
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio-theater
+    command: server --console-address ":9001" /data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    env_file:
+      - .env
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - theater_network
+
+  minio_mc:
+    build:
+      context: .
+      dockerfile: docker/minio_mc/Dockerfile
+    container_name: minio_mc_theater
+    command: ["/bin/sh", "-c", "/commands/setup_minio.sh"]
+    depends_on:
+      minio:
+        condition: service_healthy
+    env_file:
+      - .env
+    networks:
+      - theater_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_theater
+    ports:
+      - "6379:6379"
+    networks:
+      - theater_network
+
+  celery_worker:
+    build: .
+    container_name: celery_worker_theater
+    command: ["celery", "-A", "celery_app.celery_app", "worker", "--loglevel=info"]
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/usr/src/fastapi
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./src:/usr/src/fastapi
+    networks:
+      - theater_network
+
+volumes:
+  postgres_theater_data:
+    driver: local
+  pgadmin_theater_data:
+    driver: local
+  minio_data:
+    driver: local
+
+networks:
+  theater_network:
+    driver: bridge
