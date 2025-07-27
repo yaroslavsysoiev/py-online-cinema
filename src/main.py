@@ -6,6 +6,7 @@ from routes.certifications import router as certifications_router
 from routes.genres import router as genres_router
 from routes.actors import router as actors_router
 from routes.orders import router as orders_router
+from routes.payments import router as payments_router
 
 app = FastAPI(
     title="Movies homework",
@@ -21,3 +22,4 @@ app.include_router(certifications_router, prefix=f"{api_version_prefix}", tags=[
 app.include_router(genres_router, prefix=f"{api_version_prefix}", tags=["genres"])
 app.include_router(actors_router, prefix=f"{api_version_prefix}", tags=["actors"])
 app.include_router(orders_router, prefix=f"{api_version_prefix}", tags=["orders"])
+app.include_router(payments_router, prefix=f"{api_version_prefix}", tags=["payments"])

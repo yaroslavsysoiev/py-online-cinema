@@ -21,7 +21,10 @@ from database.models.movies import (
     MoviesLanguagesModel,
     CartModel,
     CartItemModel,
-    PurchasedMovieModel
+    PurchasedMovieModel,
+    PaymentModel,
+    PaymentItemModel,
+    PaymentStatusEnum
 )
 
 from database.session_sqlite import reset_sqlite_database as reset_database
